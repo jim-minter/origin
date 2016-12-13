@@ -5,8 +5,8 @@
 source "$(dirname "${BASH_SOURCE}")/../../hack/lib/init.sh"
 source "${OS_ROOT}/test/extended/setup.sh"
 
-# cgo must be disabled to have the symbol table available
-export CGO_ENABLED=0
+# disabling cgo allows use of delve in extended.test
+CGO_ENABLED=0 os::util::ensure::built_binary_exists 'extended.test' 'test/extended/extended.test'
 
 os::test::extended::setup
 os::test::extended::focus "$@"
