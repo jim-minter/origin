@@ -13,14 +13,14 @@ From the top-level origin directory, run
 Where \<some_script\>.sh is one of the bucket scripts such as "core.sh".
 
 You can further narrow the set of tests being run by passing `--ginkgo.focus="some string"` where "some string" corresponds to
-the description of the test you want to run.  For example one of the s2i tests (sti_incremental.go) defines:
+the description of the test you want to run.  For example one of the s2i tests (s2i_incremental.go) defines:
 
-	var _ = g.Describe("builds: s2i incremental build with push and pull to authenticated registry", func() {
+	var _ = g.Describe("[builds][Slow] incremental s2i build", func() {
 
-So you can write a focus filter that includes this test by passing `--ginkgo.focus="s2i incremental"`.
+So you can write a focus filter that includes this test by passing `--ginkgo.focus='\[builds\]'` or `--ginkgo.focus="s2i incremental"`.
 
 Prerequisites
------------
+-------------
 
 In order to execute the extended tests, you have to install
 [Ginkgo](https://github.com/onsi/ginkgo) framework which is used in extended
@@ -32,6 +32,24 @@ $ go get github.com/onsi/ginkgo/ginkgo
 
 You also need to have the `openshift` binary in the `PATH` if you want to use
 the shell script helpers to execute the extended tests.
+
+Rapid local testing
+--------------------
+
+If you already have a running OpenShift cluster, e.g. one created using `oc
+cluster up`, you can skip having the extended test infrastructure spin up an
+OpenShift cluster each time the tests are run by setting the `TEST_ONLY`
+environment variable as follows:
+
+```console
+$ oc cluster up
+$ oc login -u system:admin
+```
+
+Then, for example:
+```console
+$ TEST_ONLY=1 test/extended/core.sh --ginkgo.focus='\[builds\]'
+```
 
 Extended tests structure
 ------------------------
