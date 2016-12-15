@@ -34,7 +34,7 @@ var (
 	varSubDest    string
 )
 
-func doTest(bldPrefix, debugStr string, same bool, oc *exutil.CLI) {
+func doTest(bldPrefix, debugStr string, same bool, oc *exutil.CLI, images *exutil.StringSet) {
 	// corrupt the builder image
 	exutil.CorruptImage(fullImageName, corruptor)
 
@@ -49,8 +49,10 @@ func doTest(bldPrefix, debugStr string, same bool, oc *exutil.CLI) {
 	}
 
 	// kick off the app/lang build and verify the builder image accordingly
-	_, err := exutil.StartBuildAndWait(oc, bldPrefix)
+	br, err := exutil.StartBuildAndWait(oc, bldPrefix)
 	o.ExpectWithOffset(1, err).NotTo(o.HaveOccurred())
+
+	exutil.RecordBuiltImage(br, images)
 
 	if same {
 		exutil.VerifyImagesSame(fullImageName, corruptor, debugStr)
@@ -81,7 +83,10 @@ Dumping of the ImageStreams and Secrets JSON output at the various points proved
 
 var _ = g.Describe("[LocalNode][builds] forcePull should affect pulling builder images", func() {
 	defer g.GinkgoRecover()
-	var oc = exutil.NewCLI("forcepull", exutil.KubeConfigPath())
+	var (
+		oc     = exutil.NewCLI("forcepull", exutil.KubeConfigPath())
+		images = exutil.StringSet{}
+	)
 
 	g.BeforeEach(func() {
 
@@ -98,6 +103,8 @@ var _ = g.Describe("[LocalNode][builds] forcePull should affect pulling builder 
 		// any other tests potentially running in parallel
 		br, _ := exutil.StartBuildAndWait(oc, bldrPrefix)
 		br.AssertSuccess()
+
+		exutil.RecordBuiltImage(br, &images)
 
 		serviceIP, err := oc.Run("get").Args("svc", "docker-registry", "-n", "default", "--config", exutil.KubeConfigPath()).Template("{{.spec.clusterIP}}").Output()
 		o.Expect(err).NotTo(o.HaveOccurred())
@@ -144,6 +151,11 @@ var _ = g.Describe("[LocalNode][builds] forcePull should affect pulling builder 
 
 	})
 
+	g.AfterEach(func() {
+		err := exutil.RemoveBuiltImages(oc, &images)
+		o.Expect(err).NotTo(o.HaveOccurred())
+	})
+
 	g.Context("ForcePull test context  ", func() {
 
 		g.JustBeforeEach(func() {
@@ -156,27 +168,27 @@ var _ = g.Describe("[LocalNode][builds] forcePull should affect pulling builder 
 
 			g.By("when s2i force pull is false")
 
-			doTest(buildPrefixFS, "s2i false app/lang build", true, oc)
+			doTest(buildPrefixFS, "s2i false app/lang build", true, oc, &images)
 
 			g.By("when s2i force pull is true")
 
-			doTest(buildPrefixTS, "s2i true app/lang build", false, oc)
+			doTest(buildPrefixTS, "s2i true app/lang build", false, oc, &images)
 
 			g.By("when docker force pull is false")
 
-			doTest(buildPrefixFD, "dock false app/lang build", true, oc)
+			doTest(buildPrefixFD, "dock false app/lang build", true, oc, &images)
 
 			g.By("docker when force pull is true")
 
-			doTest(buildPrefixTD, "dock true app/lang build", false, oc)
+			doTest(buildPrefixTD, "dock true app/lang build", false, oc, &images)
 
 			g.By("when custom force pull is false")
 
-			doTest(buildPrefixFC, "cust false app/lang build", true, oc)
+			doTest(buildPrefixFC, "cust false app/lang build", true, oc, &images)
 
 			g.By("when custom force pull is true")
 
-			doTest(buildPrefixTC, "cust true app/lang build", false, oc)
+			doTest(buildPrefixTC, "cust true app/lang build", false, oc, &images)
 
 		})
 

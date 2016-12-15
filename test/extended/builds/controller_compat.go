@@ -9,6 +9,9 @@ import (
 	exutil "github.com/openshift/origin/test/extended/util"
 )
 
+// TODO: these tests should be updated to use exutil.RemoveBuiltImages like the
+// other builds tests.
+
 var _ = g.Describe("[bldcompat][Slow][Compatibility] build controller", func() {
 	defer g.GinkgoRecover()
 	var (

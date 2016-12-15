@@ -23,6 +23,11 @@ var _ = g.Describe("[builds][Slow] can use build secrets", func() {
 		oc                    = exutil.NewCLI("build-secrets", exutil.KubeConfigPath())
 	)
 
+	g.AfterEach(func() {
+		err := exutil.RemoveBuiltImages(oc, nil)
+		o.Expect(err).NotTo(o.HaveOccurred())
+	})
+
 	g.Describe("build with secrets", func() {
 		oc.SetOutputDir(exutil.TestContext.OutputDir)
 

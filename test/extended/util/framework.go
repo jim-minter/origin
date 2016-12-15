@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	docker "github.com/fsouza/go-dockerclient"
 	g "github.com/onsi/ginkgo"
 	o "github.com/onsi/gomega"
 
@@ -40,6 +41,7 @@ import (
 	deployutil "github.com/openshift/origin/pkg/deploy/util"
 	imageapi "github.com/openshift/origin/pkg/image/api"
 	"github.com/openshift/origin/pkg/util/namer"
+	"github.com/openshift/origin/test/util"
 )
 
 const pvPrefix = "pv-"
@@ -1215,4 +1217,81 @@ func GetPodForImage(dockerImageReference string) *kapi.Pod {
 		Name:  "test",
 		Image: dockerImageReference,
 	})
+}
+
+type StringSet map[string]struct{}
+
+func (ss *StringSet) Add(s string) {
+	(*ss)[s] = struct{}{}
+}
+
+func (ss *StringSet) Remove(s string) {
+	delete(*ss, s)
+}
+
+var RecordBuiltImageRegexp = regexp.MustCompile("(?m)--> ([0-9a-f]{12})$")
+
+func RecordBuiltImage(br *BuildResult, ids *StringSet) {
+	out, _ := br.Logs()
+	matches := RecordBuiltImageRegexp.FindAllStringSubmatch(out, -1)
+	if len(matches) != 0 {
+		(*ids)[matches[len(matches)-1][1]] = struct{}{}
+	}
+}
+
+func RemoveBuiltImages(oc *CLI, ids *StringSet) error {
+	g.By("removing built images")
+
+	if ids == nil {
+		ids = &StringSet{}
+	}
+
+	service, err := oc.Run("get").Args("svc", "docker-registry", "-n", "default", "--config", KubeConfigPath()).Template("{{.spec.clusterIP}}:{{ (index .spec.ports 0).port }}").Output()
+	if err != nil {
+		return err
+	}
+
+	dockercli, err := util.NewDockerClient()
+	if err != nil {
+		return err
+	}
+
+	// Remove any images matching w.x.y.z:5000/our-namespace/* or our-namespace/*
+	images, err := dockercli.ListImages(docker.ListImagesOptions{})
+	for _, image := range images {
+		tagdigests := append([]string{}, image.RepoTags...)
+		tagdigests = append(tagdigests, image.RepoDigests...)
+		for _, tagdigest := range tagdigests {
+			if strings.HasPrefix(tagdigest, service+"/"+oc.createdNamespace+"/") ||
+				strings.HasPrefix(tagdigest, oc.createdNamespace+"/") {
+				ids.Add(image.ID)
+				break
+			}
+		}
+	}
+
+	// Remove any other images we've been told to remove.  Note that any item in
+	// our list might be the parent of another, in which case we'll get a 409 on
+	// removal.  We keep going as long as we're making progress removing images.
+	count := len(*ids)
+	for count != 0 {
+		for id := range *ids {
+			err = dockercli.RemoveImageExtended(id, docker.RemoveImageOptions{Force: true})
+			fmt.Fprintf(g.GinkgoWriter, "Removing %s: %v\n", id, err)
+			if err != nil {
+				if e, ok := err.(*docker.Error); ok && e.Status == http.StatusConflict {
+					continue
+				}
+				return err
+			}
+			ids.Remove(id)
+		}
+		newcount := len(*ids)
+		if count == newcount {
+			return fmt.Errorf("failed to make progress removing images")
+		}
+		count = newcount
+	}
+
+	return nil
 }

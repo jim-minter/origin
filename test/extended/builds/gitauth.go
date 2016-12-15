@@ -3,6 +3,9 @@ package builds
 // these tests are diabled because the xip.io dns hook was proving way too unreliable;
 // we will reenable once an agreeable alternative is derived to get name resolution for the routes
 
+// TODO: when re-enabled, these tests should be updated to use
+// exutil.RemoveBuiltImages like the other builds tests.
+
 /*import (
 	"net"
 	"fmt"

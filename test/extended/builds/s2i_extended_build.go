@@ -34,6 +34,11 @@ var _ = g.Describe("[builds][Slow] s2i extended build", func() {
 		o.Expect(err).NotTo(o.HaveOccurred())
 	})
 
+	g.AfterEach(func() {
+		err := exutil.RemoveBuiltImages(oc, nil)
+		o.Expect(err).NotTo(o.HaveOccurred())
+	})
+
 	g.Describe("with scripts from the source repository", func() {
 		oc.SetOutputDir(exutil.TestContext.OutputDir)
 

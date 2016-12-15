@@ -15,7 +15,13 @@ var _ = g.Describe("[builds][Conformance] build without output image", func() {
 		dockerImageFixture = exutil.FixturePath("testdata", "test-docker-no-outputname.json")
 		s2iImageFixture    = exutil.FixturePath("testdata", "test-s2i-no-outputname.json")
 		oc                 = exutil.NewCLI("build-no-outputname", exutil.KubeConfigPath())
+		images             = exutil.StringSet{}
 	)
+
+	g.AfterEach(func() {
+		err := exutil.RemoveBuiltImages(oc, &images)
+		o.Expect(err).NotTo(o.HaveOccurred())
+	})
 
 	g.Describe("building from templates", func() {
 		oc.SetOutputDir(exutil.TestContext.OutputDir)
@@ -27,6 +33,8 @@ var _ = g.Describe("[builds][Conformance] build without output image", func() {
 			g.By("expecting build to pass without an output image reference specified")
 			br, err := exutil.StartBuildAndWait(oc, "test-docker")
 			br.AssertSuccess()
+
+			exutil.RecordBuiltImage(br, &images)
 
 			g.By("verifying the build test-docker-1 output")
 			buildLog, err := br.Logs()

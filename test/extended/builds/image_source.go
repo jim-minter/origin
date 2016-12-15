@@ -16,6 +16,7 @@ var _ = g.Describe("[builds][Slow] build can have Docker image source", func() {
 		oc               = exutil.NewCLI("build-image-source", exutil.KubeConfigPath())
 		imageSourceLabel = exutil.ParseLabelsOrDie("app=imagesourceapp")
 		imageDockerLabel = exutil.ParseLabelsOrDie("app=imagedockerapp")
+		images           = exutil.StringSet{}
 	)
 
 	g.JustBeforeEach(func() {
@@ -25,6 +26,11 @@ var _ = g.Describe("[builds][Slow] build can have Docker image source", func() {
 
 		g.By("waiting for imagestreams to be imported")
 		err = exutil.WaitForAnImageStream(oc.AdminClient().ImageStreams("openshift"), "jenkins", exutil.CheckImageStreamLatestTagPopulatedFn, exutil.CheckImageStreamTagNotFoundFn)
+		o.Expect(err).NotTo(o.HaveOccurred())
+	})
+
+	g.AfterEach(func() {
+		err := exutil.RemoveBuiltImages(oc, &images)
 		o.Expect(err).NotTo(o.HaveOccurred())
 	})
 
@@ -60,6 +66,8 @@ var _ = g.Describe("[builds][Slow] build can have Docker image source", func() {
 			g.By("starting the docker strategy build")
 			br, err := exutil.StartBuildAndWait(oc, "imagedockerbuild")
 			br.AssertSuccess()
+
+			exutil.RecordBuiltImage(br, &images)
 
 			g.By("expect the pod to deploy successfully")
 			pods, err := exutil.WaitForPods(oc.KubeClient().Core().Pods(oc.Namespace()), imageDockerLabel, exutil.CheckPodIsRunningFn, 1, 2*time.Minute)

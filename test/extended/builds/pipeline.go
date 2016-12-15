@@ -21,6 +21,10 @@ var _ = g.Describe("[builds][Slow] openshift pipeline build", func() {
 		err := exutil.WaitForBuilderAccount(oc.KubeClient().Core().ServiceAccounts(oc.Namespace()))
 		o.Expect(err).NotTo(o.HaveOccurred())
 	})
+	g.AfterEach(func() {
+		err := exutil.RemoveBuiltImages(oc, nil)
+		o.Expect(err).NotTo(o.HaveOccurred())
+	})
 	g.Context("Manual deploy the jenkins and trigger a jenkins pipeline build", func() {
 		g.It("JenkinsPipeline build should succeed when manual deploy the jenkins service", func() {
 			oc.SetOutputDir(exutil.TestContext.OutputDir)

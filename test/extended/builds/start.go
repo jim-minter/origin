@@ -33,6 +33,11 @@ var _ = g.Describe("[builds][Slow] starting a build using CLI", func() {
 		oc.Run("create").Args("-f", buildFixture).Execute()
 	})
 
+	g.AfterEach(func() {
+		err := exutil.RemoveBuiltImages(oc, nil)
+		o.Expect(err).NotTo(o.HaveOccurred())
+	})
+
 	g.Describe("oc start-build --wait", func() {
 		g.It("should start a build and wait for the build to complete", func() {
 			g.By("starting the build with --wait flag")

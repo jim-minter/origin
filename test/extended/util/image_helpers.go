@@ -66,7 +66,7 @@ func VerifyImagesSame(comp1, comp2, strategy string) {
 	retIDs, gerr := GetImageIDForTags(comps)
 
 	o.Expect(gerr).NotTo(o.HaveOccurred())
-	fmt.Fprintf(g.GinkgoWriter, "%s  compare image - %s, %s, %s, %s", strategy, tag1, tag2, retIDs[0], retIDs[1])
+	fmt.Fprintf(g.GinkgoWriter, "%s  compare image - %s, %s, %s, %s\n", strategy, tag1, tag2, retIDs[0], retIDs[1])
 	o.Ω(len(retIDs[0])).Should(o.BeNumerically(">", 0))
 	o.Ω(len(retIDs[1])).Should(o.BeNumerically(">", 0))
 	o.Ω(retIDs[0]).Should(o.Equal(retIDs[1]))
@@ -81,7 +81,7 @@ func VerifyImagesDifferent(comp1, comp2, strategy string) {
 	retIDs, gerr := GetImageIDForTags(comps)
 
 	o.Expect(gerr).NotTo(o.HaveOccurred())
-	fmt.Fprintf(g.GinkgoWriter, "%s  compare image - %s, %s, %s, %s", strategy, tag1, tag2, retIDs[0], retIDs[1])
+	fmt.Fprintf(g.GinkgoWriter, "%s  compare image - %s, %s, %s, %s\n", strategy, tag1, tag2, retIDs[0], retIDs[1])
 	o.Ω(len(retIDs[0])).Should(o.BeNumerically(">", 0))
 	o.Ω(len(retIDs[1])).Should(o.BeNumerically(">", 0))
 	o.Ω(retIDs[0] != retIDs[1]).Should(o.BeTrue())

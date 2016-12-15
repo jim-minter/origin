@@ -17,11 +17,17 @@ var _ = g.Describe("[builds][Slow] result image should have proper labels set", 
 		stiBuildFixture    = exutil.FixturePath("testdata", "test-s2i-build.json")
 		dockerBuildFixture = exutil.FixturePath("testdata", "test-docker-build.json")
 		oc                 = exutil.NewCLI("build-sti-labels", exutil.KubeConfigPath())
+		images             = exutil.StringSet{}
 	)
 
 	g.JustBeforeEach(func() {
 		g.By("waiting for builder service account")
 		err := exutil.WaitForBuilderAccount(oc.AdminKubeClient().Core().ServiceAccounts(oc.Namespace()))
+		o.Expect(err).NotTo(o.HaveOccurred())
+	})
+
+	g.AfterEach(func() {
+		err := exutil.RemoveBuiltImages(oc, &images)
 		o.Expect(err).NotTo(o.HaveOccurred())
 	})
 
@@ -69,6 +75,8 @@ var _ = g.Describe("[builds][Slow] result image should have proper labels set", 
 			g.By("starting a test build")
 			br, err := exutil.StartBuildAndWait(oc, "test")
 			br.AssertSuccess()
+
+			exutil.RecordBuiltImage(br, &images)
 
 			g.By("getting the Docker image reference from ImageStream")
 			imageRef, err := exutil.GetDockerImageReference(oc.Client().ImageStreams(oc.Namespace()), "test", "latest")

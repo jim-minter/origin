@@ -31,6 +31,11 @@ var _ = g.Describe("[builds][Slow] incremental s2i build", func() {
 		o.Expect(err).NotTo(o.HaveOccurred())
 	})
 
+	g.AfterEach(func() {
+		err := exutil.RemoveBuiltImages(oc, nil)
+		o.Expect(err).NotTo(o.HaveOccurred())
+	})
+
 	g.Describe("Building from a template", func() {
 		g.It(fmt.Sprintf("should create a build from %q template and run it", templateFixture), func() {
 			oc.SetOutputDir(exutil.TestContext.OutputDir)

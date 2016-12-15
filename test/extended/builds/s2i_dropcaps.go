@@ -23,6 +23,11 @@ var _ = g.Describe("[builds][Slow] Capabilities should be dropped for s2i builde
 		o.Expect(err).NotTo(o.HaveOccurred())
 	})
 
+	g.AfterEach(func() {
+		err := exutil.RemoveBuiltImages(oc, nil)
+		o.Expect(err).NotTo(o.HaveOccurred())
+	})
+
 	g.Describe("s2i build with a rootable builder", func() {
 		g.It("should not be able to switch to root with an assemble script", func() {
 

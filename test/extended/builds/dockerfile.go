@@ -31,6 +31,11 @@ USER 1001
 		oc.SetOutputDir(exutil.TestContext.OutputDir)
 	})
 
+	g.AfterEach(func() {
+		err := exutil.RemoveBuiltImages(oc, nil)
+		o.Expect(err).NotTo(o.HaveOccurred())
+	})
+
 	g.Describe("being created from new-build", func() {
 		g.It("should create a image via new-build", func() {
 			g.By(fmt.Sprintf("calling oc new-build with Dockerfile"))

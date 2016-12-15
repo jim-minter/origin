@@ -49,6 +49,7 @@ type CLI struct {
 	withoutNamespace bool
 	cmd              *cobra.Command
 	kubeFramework    *e2e.Framework
+	createdNamespace string
 }
 
 // NewCLI initialize the upstream E2E framework and set the namespace to match
@@ -147,8 +148,8 @@ func (c *CLI) SetOutputDir(dir string) *CLI {
 // All resources will be then created within this project and Kubernetes E2E
 // suite will destroy the project after test case finish.
 func (c *CLI) SetupProject(name string, kubeClient *kclient.Client, _ map[string]string) (*kapi.Namespace, error) {
-	newNamespace := kapi.SimpleNameGenerator.GenerateName(fmt.Sprintf("extended-test-%s-", name))
-	c.SetNamespace(newNamespace).ChangeUser(fmt.Sprintf("%s-user", c.Namespace()))
+	c.createdNamespace = kapi.SimpleNameGenerator.GenerateName(fmt.Sprintf("extended-test-%s-", name))
+	c.SetNamespace(c.createdNamespace).ChangeUser(fmt.Sprintf("%s-user", c.Namespace()))
 	e2e.Logf("The user is now %q", c.Username())
 
 	e2e.Logf("Creating project %q", c.Namespace())

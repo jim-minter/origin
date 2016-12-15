@@ -24,8 +24,12 @@ var _ = g.Describe("[builds][Slow] testing build configuration hooks", func() {
 		exutil.WaitForAnImageStreamTag(oc, oc.Namespace(), "busybox", "1")
 	})
 
-	g.Describe("testing postCommit hook", func() {
+	g.AfterEach(func() {
+		err := exutil.RemoveBuiltImages(oc, nil)
+		o.Expect(err).NotTo(o.HaveOccurred())
+	})
 
+	g.Describe("testing postCommit hook", func() {
 		g.It("successful postCommit script with args", func() {
 			err := oc.Run("patch").Args("bc/busybox", "-p", `{"spec":{"postCommit":{"script":"echo hello $1","args":["world"],"command":null}}}`).Execute()
 			o.Expect(err).NotTo(o.HaveOccurred())

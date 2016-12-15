@@ -32,6 +32,11 @@ var _ = g.Describe("[builds][Slow] s2i build with environment file in sources", 
 		o.Expect(err).NotTo(o.HaveOccurred())
 	})
 
+	g.AfterEach(func() {
+		err := exutil.RemoveBuiltImages(oc, nil)
+		o.Expect(err).NotTo(o.HaveOccurred())
+	})
+
 	g.Describe("Building from a template", func() {
 		g.It(fmt.Sprintf("should create a image from %q template and run it in a pod", stiEnvBuildFixture), func() {
 			oc.SetOutputDir(exutil.TestContext.OutputDir)

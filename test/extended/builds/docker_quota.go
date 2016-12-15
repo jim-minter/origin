@@ -19,11 +19,17 @@ var _ = g.Describe("[builds][quota][Slow] docker build with a quota", func() {
 	var (
 		buildFixture = exutil.FixturePath("testdata", "test-docker-build-quota.json")
 		oc           = exutil.NewCLI("docker-build-quota", exutil.KubeConfigPath())
+		images       = exutil.StringSet{}
 	)
 
 	g.JustBeforeEach(func() {
 		g.By("waiting for builder service account")
 		err := exutil.WaitForBuilderAccount(oc.AdminKubeClient().Core().ServiceAccounts(oc.Namespace()))
+		o.Expect(err).NotTo(o.HaveOccurred())
+	})
+
+	g.AfterEach(func() {
+		err := exutil.RemoveBuiltImages(oc, &images)
 		o.Expect(err).NotTo(o.HaveOccurred())
 	})
 
@@ -37,6 +43,8 @@ var _ = g.Describe("[builds][quota][Slow] docker build with a quota", func() {
 
 			g.By("starting a test build")
 			br, err := exutil.StartBuildAndWait(oc, "docker-build-quota", "--from-dir", exutil.FixturePath("testdata", "build-quota"))
+
+			exutil.RecordBuiltImage(br, &images)
 
 			g.By("expecting the build is in Failed phase")
 			br.AssertFailure()

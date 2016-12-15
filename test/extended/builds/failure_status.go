@@ -24,11 +24,17 @@ var _ = g.Describe("[builds][Slow] update failure status", func() {
 		builderImageFixture   = exutil.FixturePath("testdata", "statusfail-fetchbuilderimage.yaml")
 		pushToRegistryFixture = exutil.FixturePath("testdata", "statusfail-pushtoregistry.yaml")
 		failedAssembleFixture = exutil.FixturePath("testdata", "statusfail-failedassemble.yaml")
+		images                = exutil.StringSet{}
 	)
 
 	g.JustBeforeEach(func() {
 		g.By("waiting for the builder service account")
 		err := exutil.WaitForBuilderAccount(oc.KubeClient().ServiceAccounts(oc.Namespace()))
+		o.Expect(err).NotTo(o.HaveOccurred())
+	})
+
+	g.AfterEach(func() {
+		err := exutil.RemoveBuiltImages(oc, &images)
 		o.Expect(err).NotTo(o.HaveOccurred())
 	})
 
@@ -87,6 +93,9 @@ var _ = g.Describe("[builds][Slow] update failure status", func() {
 
 			br, err := exutil.StartBuildAndWait(oc, "failstatus-pushtoregistry")
 			o.Expect(err).NotTo(o.HaveOccurred())
+
+			images.Add("bogus.registry/image")
+
 			br.AssertFailure()
 
 			build, err := oc.Client().Builds(oc.Namespace()).Get(br.Build.Name)

@@ -16,6 +16,11 @@ var _ = g.Describe("[builds][Slow] extremely long build/bc names are not problem
 		oc               = exutil.NewCLI("long-names", exutil.KubeConfigPath())
 	)
 
+	g.AfterEach(func() {
+		err := exutil.RemoveBuiltImages(oc, nil)
+		o.Expect(err).NotTo(o.HaveOccurred())
+	})
+
 	g.Describe("build with long names", func() {
 		oc.SetOutputDir(exutil.TestContext.OutputDir)
 

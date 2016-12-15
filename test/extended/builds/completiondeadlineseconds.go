@@ -24,6 +24,11 @@ var _ = g.Describe("[builds][Slow] builds should have deadlines", func() {
 		o.Expect(err).NotTo(o.HaveOccurred())
 	})
 
+	g.AfterEach(func() {
+		err := exutil.RemoveBuiltImages(oc, nil)
+		o.Expect(err).NotTo(o.HaveOccurred())
+	})
+
 	g.Describe("oc start-build source-build --wait", func() {
 		g.It("Source: should start a build and wait for the build failed and build pod being killed by kubelet", func() {
 

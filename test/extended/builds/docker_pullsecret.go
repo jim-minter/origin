@@ -27,6 +27,11 @@ var _ = g.Describe("[builds][pullsecret][Conformance] docker build using a pull 
 		o.Expect(err).NotTo(o.HaveOccurred())
 	})
 
+	g.AfterEach(func() {
+		err := exutil.RemoveBuiltImages(oc, nil)
+		o.Expect(err).NotTo(o.HaveOccurred())
+	})
+
 	g.Describe("Building from a template", func() {
 		g.It("should create a docker build that pulls using a secret run it", func() {
 			oc.SetOutputDir(exutil.TestContext.OutputDir)
