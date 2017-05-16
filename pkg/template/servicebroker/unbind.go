@@ -3,10 +3,9 @@ package servicebroker
 import (
 	"net/http"
 
+	"github.com/openshift/origin/pkg/openservicebroker/api"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
-	"github.com/openshift/origin/pkg/openservicebroker/api"
 )
 
 func (b *Broker) Unbind(instanceID, bindingID string) *api.Response {

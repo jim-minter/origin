@@ -512,8 +512,6 @@ func (c *MasterConfig) InstallProtectedAPI(server *apiserver.GenericAPIServer) (
 			templateapi.ServiceBrokerRoot,
 			templateservicebroker.NewBroker(
 				c.PrivilegedLoopbackClientConfig,
-				c.PrivilegedLoopbackOpenShiftClient,
-				c.PrivilegedLoopbackKubernetesClientsetInternal.Core(),
 				c.TemplateInformers.Template().InternalVersion().Templates(),
 				c.Options.TemplateServiceBrokerConfig.TemplateNamespaces,
 			),

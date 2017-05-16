@@ -4,9 +4,11 @@ import (
 	"errors"
 	"fmt"
 
+	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 	"k8s.io/apiserver/pkg/authentication/user"
 	apirequest "k8s.io/apiserver/pkg/endpoints/request"
@@ -18,7 +20,6 @@ import (
 	"github.com/openshift/origin/pkg/client"
 	templateapi "github.com/openshift/origin/pkg/template/api"
 	"github.com/openshift/origin/pkg/template/api/validation"
-	userapi "github.com/openshift/origin/pkg/user/api"
 )
 
 // templateInstanceStrategy implements behavior for Templates
@@ -118,23 +119,30 @@ func SelectableFields(obj *templateapi.TemplateInstance) fields.Set {
 	return templateapi.TemplateInstanceToSelectableFields(obj)
 }
 
+func (s *templateInstanceStrategy) authorize(u user.Info, action *authorizationapi.Action) error {
+	sar := authorizationapi.AddUserToSAR(u, &authorizationapi.SubjectAccessReview{Action: *action})
+	resp, err := s.oc.SubjectAccessReviews().Create(sar)
+	if err == nil && resp != nil && resp.Allowed {
+		return nil
+	}
+	if err == nil {
+		err = errors.New(resp.Reason)
+	}
+	return kerrors.NewForbidden(schema.GroupResource{Group: action.Group, Resource: action.Resource}, action.ResourceName, err)
+}
+
 func (s *templateInstanceStrategy) validateImpersonation(templateInstance *templateapi.TemplateInstance, userinfo user.Info) field.ErrorList {
 	if templateInstance.Spec.Requester == nil || templateInstance.Spec.Requester.Username == "" {
 		return field.ErrorList{field.Required(field.NewPath("spec.requester.username"), "")}
 	}
 
 	if templateInstance.Spec.Requester.Username != userinfo.GetName() {
-		sar := authorizationapi.AddUserToSAR(userinfo,
-			&authorizationapi.SubjectAccessReview{
-				Action: authorizationapi.Action{
-					Verb:         "impersonate",
-					Group:        userapi.GroupName,
-					Resource:     authorizationapi.UserResource,
-					ResourceName: templateInstance.Spec.Requester.Username,
-				},
-			})
-		resp, err := s.oc.SubjectAccessReviews().Create(sar)
-		if err != nil || resp == nil || !resp.Allowed {
+		if err := s.authorize(userinfo, &authorizationapi.Action{
+			Namespace: templateInstance.Namespace,
+			Verb:      "impersonate",
+			Group:     templateapi.GroupName,
+			Resource:  "templateinstances",
+		}); err != nil {
 			return field.ErrorList{field.Forbidden(field.NewPath("spec.impersonateUser"), "impersonation forbidden")}
 		}
 	}

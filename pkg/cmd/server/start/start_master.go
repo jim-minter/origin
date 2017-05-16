@@ -846,7 +846,12 @@ func startControllers(oc *origin.MasterConfig, kc *kubernetes.MasterConfig) erro
 	oc.RunIngressIPController(ingressIPClientInternal, ingressIPClientExternal)
 
 	if oc.Options.TemplateServiceBrokerConfig != nil {
-		oc.RunTemplateController()
+		templateInstanceControllerConfig, _, _, _, err := oc.GetServiceAccountClients(bootstrappolicy.InfraTemplateInstanceControllerServiceAccountName)
+		if err != nil {
+			glog.Fatalf("Could not get client: %v", err)
+		}
+
+		oc.RunTemplateController(templateInstanceControllerConfig)
 	}
 
 	glog.Infof("Started Origin Controllers")

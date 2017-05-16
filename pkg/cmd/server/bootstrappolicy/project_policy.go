@@ -42,3 +42,29 @@ func GetBootstrapServiceAccountProjectRoleBindings(namespace string) []authoriza
 		},
 	}
 }
+
+func GetBootstrapTemplateServiceBrokerProjectRoleBindings(namespace string) []authorizationapi.RoleBinding {
+	return []authorizationapi.RoleBinding{
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      TemplateServiceBrokerRoleBindingName,
+				Namespace: namespace,
+			},
+			RoleRef: kapi.ObjectReference{
+				Name: TemplateServiceBrokerRoleName,
+			},
+			Subjects: []kapi.ObjectReference{
+				{
+					Kind:      authorizationapi.ServiceAccountKind,
+					Name:      InfraTemplateServiceBrokerServiceAccountName,
+					Namespace: DefaultOpenShiftInfraNamespace,
+				},
+			},
+		},
+	}
+}
+
+func GetBootstrapProjectRoleBindings(namespace string) []authorizationapi.RoleBinding {
+	return append(GetBootstrapServiceAccountProjectRoleBindings(namespace),
+		GetBootstrapTemplateServiceBrokerProjectRoleBindings(namespace)...)
+}

@@ -13,6 +13,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	utilwait "k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/apiserver/pkg/admission"
+	"k8s.io/client-go/rest"
 	"k8s.io/client-go/util/cert"
 	"k8s.io/client-go/util/flowcontrol"
 	kctrlmgr "k8s.io/kubernetes/cmd/kube-controller-manager/app"
@@ -593,8 +594,8 @@ func (c *MasterConfig) RunUnidlingController() {
 	cont.Run(utilwait.NeverStop)
 }
 
-func (c *MasterConfig) RunTemplateController() {
-	go templatecontroller.NewTemplateInstanceController(c.PrivilegedLoopbackClientConfig).Run(utilwait.NeverStop)
+func (c *MasterConfig) RunTemplateController(config *rest.Config) {
+	go templatecontroller.NewTemplateInstanceController(config).Run(utilwait.NeverStop)
 }
 
 func (c *MasterConfig) RunOriginToRBACSyncControllers() {

@@ -62,6 +62,7 @@ const (
 	RegistryViewerRoleName = "registry-viewer"
 	RegistryEditorRoleName = "registry-editor"
 
+	TemplateServiceBrokerRoleName       = "templateservicebroker"
 	TemplateServiceBrokerClientRoleName = "templateservicebroker-client"
 
 	BuildStrategyDockerRoleName          = "system:build-strategy-docker"
@@ -129,4 +130,6 @@ const (
 	BuildStrategyJenkinsPipelineRoleBindingName = BuildStrategyJenkinsPipelineRoleName + "-binding"
 
 	OpenshiftSharedResourceViewRoleBindingName = OpenshiftSharedResourceViewRoleName + "s"
+
+	TemplateServiceBrokerRoleBindingName = TemplateServiceBrokerRoleName + "-binding"
 )

@@ -17,6 +17,7 @@ import (
 	authorizationapi "github.com/openshift/origin/pkg/authorization/api"
 	authorizationapiv1 "github.com/openshift/origin/pkg/authorization/api/v1"
 	buildapi "github.com/openshift/origin/pkg/build/api"
+	templateapi "github.com/openshift/origin/pkg/template/api"
 
 	// we need the conversions registered for our init block
 	_ "github.com/openshift/origin/pkg/authorization/api/install"
@@ -91,6 +92,12 @@ const (
 
 	InfraGarbageCollectorControllerServiceAccountName = "garbage-collector-controller"
 	GarbageCollectorControllerRoleName                = "system:garbage-collector-controller"
+
+	InfraTemplateInstanceControllerServiceAccountName = "template-instance-controller"
+	TemplateInstanceControllerRoleName                = "system:template-instance-controller"
+
+	InfraTemplateServiceBrokerServiceAccountName = "template-service-broker"
+	TemplateServiceBrokerControllerRoleName      = "system:template-service-broker"
 )
 
 type InfraServiceAccounts struct {
@@ -1115,6 +1122,59 @@ func init() {
 					APIGroups: []string{"*"},
 					Verbs:     sets.NewString("get", "list", "watch", "patch", "update", "delete"),
 					Resources: sets.NewString("*"),
+				},
+			},
+		},
+	)
+	if err != nil {
+		panic(err)
+	}
+
+	err = InfraSAs.addServiceAccount(
+		InfraTemplateInstanceControllerServiceAccountName,
+		authorizationapi.ClusterRole{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: TemplateInstanceControllerRoleName,
+			},
+			Rules: []authorizationapi.PolicyRule{
+				{
+					APIGroups: []string{templateapi.GroupName},
+					// "impersonate" is required for the API server to accept updates to
+					// TemplateInstance objects where the requester username is not the
+					// API caller.
+					Verbs:     sets.NewString("get", "list", "watch", "update", "impersonate"),
+					Resources: sets.NewString("templateinstances"),
+				},
+				{
+					APIGroups: []string{kapi.GroupName},
+					Verbs:     sets.NewString("get"),
+					Resources: sets.NewString("secrets"),
+				},
+				{
+					APIGroups: []string{"*"},
+					// delete is needed to avoid error: "cannot set an ownerRef on a
+					// resource you can't delete"
+					Verbs:     sets.NewString("create", "delete"),
+					Resources: sets.NewString("*"),
+				},
+			},
+		},
+	)
+	if err != nil {
+		panic(err)
+	}
+
+	err = InfraSAs.addServiceAccount(
+		InfraTemplateServiceBrokerServiceAccountName,
+		authorizationapi.ClusterRole{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: TemplateServiceBrokerControllerRoleName,
+			},
+			Rules: []authorizationapi.PolicyRule{
+				{
+					APIGroups: []string{templateapi.GroupName},
+					Verbs:     sets.NewString("get", "create", "update", "delete"),
+					Resources: sets.NewString("brokertemplateinstances"),
 				},
 			},
 		},

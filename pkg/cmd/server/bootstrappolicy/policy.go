@@ -929,6 +929,39 @@ func GetOpenshiftBootstrapClusterRoles() []authorizationapi.ClusterRole {
 				},
 			},
 		},
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: TemplateServiceBrokerRoleName,
+				Annotations: map[string]string{
+					roleSystemOnly: roleIsSystemOnly,
+				},
+			},
+			Rules: []authorizationapi.PolicyRule{
+				{
+					APIGroups: []string{authorizationapi.LegacyGroupName},
+					Verbs:     sets.NewString("create"),
+					Resources: sets.NewString("subjectaccessreviews"),
+				},
+				{
+					APIGroups: []string{templateapi.GroupName},
+					// "impersonate" is required for the API server to accept creation of
+					// TemplateInstance objects with the requester username set to an
+					// identity which is not the API caller.
+					Verbs:     sets.NewString("get", "create", "delete", "impersonate"),
+					Resources: sets.NewString("templateinstances"),
+				},
+				{
+					APIGroups: []string{kapi.GroupName},
+					Verbs:     sets.NewString("get", "list", "create", "delete"),
+					Resources: sets.NewString("secrets"),
+				},
+				{
+					APIGroups: []string{kapi.GroupName},
+					Verbs:     sets.NewString("list"),
+					Resources: sets.NewString("services"),
+				},
+			},
+		},
 	}
 
 	// TODO check if we really need to do this

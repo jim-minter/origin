@@ -31,7 +31,7 @@ func TestOpenshiftRoles(t *testing.T) {
 }
 
 func TestBootstrapProjectRoleBindings(t *testing.T) {
-	roleBindings := bootstrappolicy.GetBootstrapServiceAccountProjectRoleBindings("myproject")
+	roleBindings := bootstrappolicy.GetBootstrapProjectRoleBindings("myproject")
 	list := &api.List{}
 	for i := range roleBindings {
 		list.Items = append(list.Items, &roleBindings[i])

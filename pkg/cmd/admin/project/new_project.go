@@ -127,7 +127,7 @@ func (o *NewProjectOptions) Run(useNodeSelector bool) error {
 		}
 	}
 
-	for _, binding := range bootstrappolicy.GetBootstrapServiceAccountProjectRoleBindings(o.ProjectName) {
+	for _, binding := range bootstrappolicy.GetBootstrapProjectRoleBindings(o.ProjectName) {
 		addRole := &policy.RoleModificationOptions{
 			RoleName:            binding.RoleRef.Name,
 			RoleNamespace:       binding.RoleRef.Namespace,

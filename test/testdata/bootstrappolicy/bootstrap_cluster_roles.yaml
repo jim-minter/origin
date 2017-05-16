@@ -2800,6 +2800,48 @@ items:
 - apiVersion: v1
   kind: ClusterRole
   metadata:
+    annotations:
+      authorization.openshift.io/system-only: "true"
+    creationTimestamp: null
+    name: templateservicebroker
+  rules:
+  - apiGroups:
+    - ""
+    attributeRestrictions: null
+    resources:
+    - subjectaccessreviews
+    verbs:
+    - create
+  - apiGroups:
+    - template.openshift.io
+    attributeRestrictions: null
+    resources:
+    - templateinstances
+    verbs:
+    - create
+    - delete
+    - get
+    - impersonate
+  - apiGroups:
+    - ""
+    attributeRestrictions: null
+    resources:
+    - secrets
+    verbs:
+    - create
+    - delete
+    - get
+    - list
+  - apiGroups:
+    - ""
+    attributeRestrictions: null
+    resources:
+    - services
+    verbs:
+    - list
+- apiVersion: v1
+  kind: ClusterRole
+  metadata:
     creationTimestamp: null
     name: system:replication-controller
   rules: []
@@ -3926,6 +3968,58 @@ items:
     verbs:
     - create
     - patch
+    - update
+- apiVersion: v1
+  kind: ClusterRole
+  metadata:
+    annotations:
+      authorization.openshift.io/system-only: "true"
+    creationTimestamp: null
+    name: system:template-instance-controller
+  rules:
+  - apiGroups:
+    - template.openshift.io
+    attributeRestrictions: null
+    resources:
+    - templateinstances
+    verbs:
+    - get
+    - impersonate
+    - list
+    - update
+    - watch
+  - apiGroups:
+    - ""
+    attributeRestrictions: null
+    resources:
+    - secrets
+    verbs:
+    - get
+  - apiGroups:
+    - '*'
+    attributeRestrictions: null
+    resources:
+    - '*'
+    verbs:
+    - create
+    - delete
+- apiVersion: v1
+  kind: ClusterRole
+  metadata:
+    annotations:
+      authorization.openshift.io/system-only: "true"
+    creationTimestamp: null
+    name: system:template-service-broker
+  rules:
+  - apiGroups:
+    - template.openshift.io
+    attributeRestrictions: null
+    resources:
+    - brokertemplateinstances
+    verbs:
+    - create
+    - delete
+    - get
     - update
 - apiVersion: v1
   kind: ClusterRole

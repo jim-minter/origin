@@ -44,9 +44,9 @@ func DefaultTemplate() *templateapi.Template {
 		panic(err)
 	}
 
-	serviceAccountRoleBindings := bootstrappolicy.GetBootstrapServiceAccountProjectRoleBindings(ns)
-	for i := range serviceAccountRoleBindings {
-		if err := templateapi.AddObjectsToTemplate(ret, []runtime.Object{&serviceAccountRoleBindings[i]}, authorizationapiv1.SchemeGroupVersion); err != nil {
+	bootstrapRoleBindings := bootstrappolicy.GetBootstrapProjectRoleBindings(ns)
+	for i := range bootstrapRoleBindings {
+		if err := templateapi.AddObjectsToTemplate(ret, []runtime.Object{&bootstrapRoleBindings[i]}, authorizationapiv1.SchemeGroupVersion); err != nil {
 			panic(err)
 		}
 	}
