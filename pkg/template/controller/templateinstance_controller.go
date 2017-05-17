@@ -205,7 +205,7 @@ func (c *TemplateInstanceController) provision(templateInstance *templateapi.Tem
 		},
 		Op: func(info *resource.Info, namespace string, obj runtime.Object) (runtime.Object, error) {
 			if err = c.authorize(u, &authorizationapi.Action{
-				Namespace: namespace,
+				Namespace: info.Namespace,
 				Verb:      "create",
 				Group:     info.Mapping.GroupVersionKind.Group,
 				Resource:  info.Mapping.Resource,

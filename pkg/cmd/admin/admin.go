@@ -1,5 +1,6 @@
 package admin
 
+//	migrateprojects "github.com/openshift/origin/pkg/cmd/admin/migrate/projects"
 import (
 	"fmt"
 	"io"
@@ -92,6 +93,7 @@ func NewCommandAdmin(name, fullName string, in io.Reader, out io.Writer, errout 
 					migrate.MigrateRecommendedName, fullName+" "+migrate.MigrateRecommendedName, f, out, errout,
 					// Migration commands
 					migrateimages.NewCmdMigrateImageReferences("image-references", fullName+" "+migrate.MigrateRecommendedName+" image-references", f, in, out, errout),
+					//migrateprojects.NewCmdMigrateProjects("projects", fullName+" "+migrate.MigrateRecommendedName+" projects", f, in, out, errout),
 					migratestorage.NewCmdMigrateAPIStorage("storage", fullName+" "+migrate.MigrateRecommendedName+" storage", f, in, out, errout),
 				),
 				top.NewCommandTop(top.TopRecommendedName, fullName+" "+top.TopRecommendedName, f, out, errout),
