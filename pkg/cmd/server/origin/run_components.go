@@ -595,7 +595,7 @@ func (c *MasterConfig) RunUnidlingController() {
 }
 
 func (c *MasterConfig) RunTemplateController(config *rest.Config) {
-	go templatecontroller.NewTemplateInstanceController(c.PrivilegedLoopbackOpenShiftClient, c.PrivilegedLoopbackKubernetesClientsetInternal, c.PrivilegedLoopbackTemplateClientset.TemplateClient).Run(utilwait.NeverStop)
+	go templatecontroller.NewTemplateInstanceController(c.PrivilegedLoopbackOpenShiftClient, c.PrivilegedLoopbackKubernetesClientsetInternal, c.PrivilegedLoopbackTemplateClientset.TemplateClient, c.TemplateInformers.Template().InternalVersion().TemplateInstances().Informer()).Run(utilwait.NeverStop)
 }
 
 func (c *MasterConfig) RunOriginToRBACSyncControllers() {

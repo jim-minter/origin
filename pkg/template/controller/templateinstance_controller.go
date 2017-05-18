@@ -11,7 +11,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	utilerrors "k8s.io/apimachinery/pkg/util/errors"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	watch "k8s.io/apimachinery/pkg/watch"
 	"k8s.io/apiserver/pkg/authentication/user"
 	"k8s.io/client-go/tools/cache"
 	kapi "k8s.io/kubernetes/pkg/api"
@@ -31,43 +30,27 @@ type TemplateInstanceController struct {
 	oc             *client.Client
 	kc             kclientsetinternal.Interface
 	templateclient internalversiontemplate.TemplateInterface
-	controller     cache.Controller
 }
 
-func NewTemplateInstanceController(oc *client.Client, kc kclientsetinternal.Interface, templateclient internalversiontemplate.TemplateInterface) *TemplateInstanceController {
+func NewTemplateInstanceController(oc *client.Client, kc kclientsetinternal.Interface, templateclient internalversiontemplate.TemplateInterface, informer cache.SharedIndexInformer) cache.Controller {
 	c := TemplateInstanceController{
 		oc:             oc,
 		kc:             kc,
 		templateclient: templateclient,
 	}
-	_, c.controller = cache.NewInformer(
-		&cache.ListWatch{
-			ListFunc: func(options metav1.ListOptions) (runtime.Object, error) {
-				return c.templateclient.TemplateInstances(kapi.NamespaceAll).List(options)
-			},
-			WatchFunc: func(options metav1.ListOptions) (watch.Interface, error) {
-				return c.templateclient.TemplateInstances(kapi.NamespaceAll).Watch(options)
-			},
-		},
-		&templateapi.TemplateInstance{},
-		0,
-		cache.ResourceEventHandlerFuncs{
-			AddFunc: func(obj interface{}) {
-				c.handle(obj.(*templateapi.TemplateInstance))
-			},
-			UpdateFunc: func(_, obj interface{}) {
-				c.handle(obj.(*templateapi.TemplateInstance))
-			},
-			DeleteFunc: func(obj interface{}) {
-			},
-		},
-	)
 
-	return &c
-}
+	informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc: func(obj interface{}) {
+			c.handle(obj.(*templateapi.TemplateInstance))
+		},
+		UpdateFunc: func(_, obj interface{}) {
+			c.handle(obj.(*templateapi.TemplateInstance))
+		},
+		DeleteFunc: func(obj interface{}) {
+		},
+	})
 
-func (c *TemplateInstanceController) Run(stop <-chan struct{}) {
-	c.controller.Run(stop)
+	return informer.GetController()
 }
 
 func (c *TemplateInstanceController) handle(templateInstance *templateapi.TemplateInstance) error {
@@ -203,7 +186,7 @@ func (c *TemplateInstanceController) provision(templateInstance *templateapi.Tem
 		},
 		Op: func(info *resource.Info, namespace string, obj runtime.Object) (runtime.Object, error) {
 			if err = c.authorize(u, &authorizationapi.Action{
-				Namespace: info.Namespace,
+				Namespace: namespace,
 				Verb:      "create",
 				Group:     info.Mapping.GroupVersionKind.Group,
 				Resource:  info.Mapping.Resource,
