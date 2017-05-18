@@ -1139,10 +1139,10 @@ func init() {
 			Rules: []authorizationapi.PolicyRule{
 				{
 					APIGroups: []string{templateapi.GroupName},
-					// "impersonate" is required for the API server to accept updates to
+					// "assign" is required for the API server to accept updates to
 					// TemplateInstance objects where the requester username is not the
 					// API caller.
-					Verbs:     sets.NewString("get", "list", "watch", "update", "impersonate"),
+					Verbs:     sets.NewString("get", "list", "watch", "update", "assign"),
 					Resources: sets.NewString("templateinstances"),
 				},
 				{

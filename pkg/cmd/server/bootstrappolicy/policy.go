@@ -944,10 +944,10 @@ func GetOpenshiftBootstrapClusterRoles() []authorizationapi.ClusterRole {
 				},
 				{
 					APIGroups: []string{templateapi.GroupName},
-					// "impersonate" is required for the API server to accept creation of
+					// "assign" is required for the API server to accept creation of
 					// TemplateInstance objects with the requester username set to an
 					// identity which is not the API caller.
-					Verbs:     sets.NewString("get", "create", "delete", "impersonate"),
+					Verbs:     sets.NewString("get", "create", "delete", "assign"),
 					Resources: sets.NewString("templateinstances"),
 				},
 				{

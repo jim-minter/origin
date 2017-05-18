@@ -178,7 +178,8 @@ type MasterConfig struct {
 	// built from PrivilegedLoopbackClientConfig. It should only be accessed via the *Client() helper methods.
 	// To apply different access control to a system component, create a separate client/config specifically
 	// for that component.
-	PrivilegedLoopbackOpenShiftClient *osclient.Client
+	PrivilegedLoopbackOpenShiftClient   *osclient.Client
+	PrivilegedLoopbackTemplateClientset *templateclient.Clientset
 
 	// Informers is a shared factory for getting SharedInformers. It is important to get your informers, indexers, and listers
 	// from here so that we only end up with a single cache of objects
@@ -350,9 +351,10 @@ func BuildMasterConfig(options configapi.MasterConfig) (*MasterConfig, error) {
 		PrivilegedLoopbackOpenShiftClient:             privilegedLoopbackOpenShiftClient,
 		PrivilegedLoopbackKubernetesClientsetInternal: privilegedLoopbackKubeClientsetInternal,
 		PrivilegedLoopbackKubernetesClientsetExternal: privilegedLoopbackKubeClientsetExternal,
-		Informers:              informerFactory,
-		AuthorizationInformers: authorizationInformers,
-		TemplateInformers:      templateInformers,
+		PrivilegedLoopbackTemplateClientset:           templateClient,
+		Informers:                                     informerFactory,
+		AuthorizationInformers:                        authorizationInformers,
+		TemplateInformers:                             templateInformers,
 	}
 
 	// ensure that the limit range informer will be started

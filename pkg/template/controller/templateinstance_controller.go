@@ -13,7 +13,6 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	watch "k8s.io/apimachinery/pkg/watch"
 	"k8s.io/apiserver/pkg/authentication/user"
-	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
 	kapi "k8s.io/kubernetes/pkg/api"
 	"k8s.io/kubernetes/pkg/kubectl/resource"
@@ -24,7 +23,6 @@ import (
 	"github.com/openshift/origin/pkg/config/cmd"
 	templateapi "github.com/openshift/origin/pkg/template/api"
 	templateapiv1 "github.com/openshift/origin/pkg/template/api/v1"
-	templateclientset "github.com/openshift/origin/pkg/template/generated/internalclientset"
 	internalversiontemplate "github.com/openshift/origin/pkg/template/generated/internalclientset/typed/template/internalversion"
 	kclientsetinternal "k8s.io/kubernetes/pkg/client/clientset_generated/internalclientset"
 )
@@ -36,11 +34,11 @@ type TemplateInstanceController struct {
 	controller     cache.Controller
 }
 
-func NewTemplateInstanceController(restconfig *rest.Config) *TemplateInstanceController {
+func NewTemplateInstanceController(oc *client.Client, kc kclientsetinternal.Interface, templateclient internalversiontemplate.TemplateInterface) *TemplateInstanceController {
 	c := TemplateInstanceController{
-		oc:             client.NewOrDie(restconfig),
-		kc:             kclientsetinternal.NewForConfigOrDie(restconfig),
-		templateclient: templateclientset.NewForConfigOrDie(restconfig).Template(),
+		oc:             oc,
+		kc:             kc,
+		templateclient: templateclient,
 	}
 	_, c.controller = cache.NewInformer(
 		&cache.ListWatch{

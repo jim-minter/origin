@@ -139,7 +139,7 @@ func (s *templateInstanceStrategy) validateImpersonation(templateInstance *templ
 	if templateInstance.Spec.Requester.Username != userinfo.GetName() {
 		if err := s.authorize(userinfo, &authorizationapi.Action{
 			Namespace: templateInstance.Namespace,
-			Verb:      "impersonate",
+			Verb:      "assign",
 			Group:     templateapi.GroupName,
 			Resource:  "templateinstances",
 		}); err != nil {
