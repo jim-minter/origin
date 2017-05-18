@@ -7,6 +7,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	kapi "k8s.io/kubernetes/pkg/api"
 	"k8s.io/kubernetes/pkg/apis/apps"
+	"k8s.io/kubernetes/pkg/apis/authorization"
 	"k8s.io/kubernetes/pkg/apis/autoscaling"
 	"k8s.io/kubernetes/pkg/apis/batch"
 	"k8s.io/kubernetes/pkg/apis/certificates"
@@ -1171,6 +1172,11 @@ func init() {
 				Name: TemplateServiceBrokerControllerRoleName,
 			},
 			Rules: []authorizationapi.PolicyRule{
+				{
+					APIGroups: []string{authorization.GroupName},
+					Verbs:     sets.NewString("create"),
+					Resources: sets.NewString("subjectaccessreviews"),
+				},
 				{
 					APIGroups: []string{templateapi.GroupName},
 					Verbs:     sets.NewString("get", "create", "update", "delete"),

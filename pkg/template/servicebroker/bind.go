@@ -6,7 +6,6 @@ import (
 	"strconv"
 	"strings"
 
-	authorizationapi "github.com/openshift/origin/pkg/authorization/api"
 	"github.com/openshift/origin/pkg/openservicebroker/api"
 	templateapi "github.com/openshift/origin/pkg/template/api"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
@@ -15,6 +14,7 @@ import (
 	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/apiserver/pkg/authentication/user"
 	kapi "k8s.io/kubernetes/pkg/api"
+	"k8s.io/kubernetes/pkg/apis/authorization"
 )
 
 // copied from vendor/k8s.io/kubernetes/pkg/kubelet/envvars/envvars.go
@@ -28,7 +28,7 @@ func makeEnvVariableName(str string) string {
 func (b *Broker) getServices(u user.Info, namespace, instanceID string) (map[string]string, *api.Response) {
 	requirement, _ := labels.NewRequirement(templateapi.TemplateInstanceLabel, selection.Equals, []string{instanceID})
 
-	if err := b.authorize(u, &authorizationapi.Action{
+	if err := b.authorize(u, &authorization.ResourceAttributes{
 		Namespace: namespace,
 		Verb:      "list",
 		Group:     kapi.GroupName,
@@ -71,7 +71,7 @@ func (b *Broker) getServices(u user.Info, namespace, instanceID string) (map[str
 func (b *Broker) getSecrets(u user.Info, namespace, instanceID string) (map[string]string, *api.Response) {
 	requirement, _ := labels.NewRequirement(templateapi.TemplateInstanceLabel, selection.Equals, []string{instanceID})
 
-	if err := b.authorize(u, &authorizationapi.Action{
+	if err := b.authorize(u, &authorization.ResourceAttributes{
 		Namespace: namespace,
 		Verb:      "list",
 		Group:     kapi.GroupName,

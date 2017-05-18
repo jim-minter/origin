@@ -938,11 +938,6 @@ func GetOpenshiftBootstrapClusterRoles() []authorizationapi.ClusterRole {
 			},
 			Rules: []authorizationapi.PolicyRule{
 				{
-					APIGroups: []string{authorizationapi.LegacyGroupName},
-					Verbs:     sets.NewString("create"),
-					Resources: sets.NewString("subjectaccessreviews"),
-				},
-				{
 					APIGroups: []string{templateapi.GroupName},
 					// "assign" is required for the API server to accept creation of
 					// TemplateInstance objects with the requester username set to an

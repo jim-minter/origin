@@ -14,10 +14,10 @@ import (
 	"k8s.io/apiserver/pkg/authentication/user"
 	"k8s.io/client-go/tools/cache"
 	kapi "k8s.io/kubernetes/pkg/api"
+	"k8s.io/kubernetes/pkg/apis/authorization"
 	"k8s.io/kubernetes/pkg/kubectl/resource"
 
 	"github.com/openshift/origin/pkg/api/latest"
-	authorizationapi "github.com/openshift/origin/pkg/authorization/api"
 	"github.com/openshift/origin/pkg/client"
 	"github.com/openshift/origin/pkg/config/cmd"
 	templateapi "github.com/openshift/origin/pkg/template/api"
@@ -91,16 +91,30 @@ func (c *TemplateInstanceController) handle(templateInstance *templateapi.Templa
 	return err
 }
 
-func (c *TemplateInstanceController) authorize(u user.Info, action *authorizationapi.Action) error {
-	sar := authorizationapi.AddUserToSAR(u, &authorizationapi.SubjectAccessReview{Action: *action})
-	resp, err := c.oc.SubjectAccessReviews().Create(sar)
-	if err == nil && resp != nil && resp.Allowed {
+func (c *TemplateInstanceController) authorize(u user.Info, resourceAttributes *authorization.ResourceAttributes) error {
+	sar := &authorization.SubjectAccessReview{
+		Spec: authorization.SubjectAccessReviewSpec{
+			ResourceAttributes: resourceAttributes,
+			User:               u.GetName(),
+			Groups:             u.GetGroups(),
+		},
+	}
+
+	if extra := u.GetExtra(); len(extra) > 0 {
+		sar.Spec.Extra = map[string]authorization.ExtraValue{}
+		for k, v := range extra {
+			sar.Spec.Extra[k] = authorization.ExtraValue(v)
+		}
+	}
+
+	resp, err := c.kc.Authorization().SubjectAccessReviews().Create(sar)
+	if err == nil && resp != nil && resp.Status.Allowed {
 		return nil
 	}
 	if err == nil {
-		err = errors.New(resp.Reason)
+		err = errors.New(resp.Status.Reason)
 	}
-	return kerrors.NewForbidden(schema.GroupResource{Group: action.Group, Resource: action.Resource}, action.ResourceName, err)
+	return kerrors.NewForbidden(schema.GroupResource{Group: resourceAttributes.Group, Resource: resourceAttributes.Resource}, resourceAttributes.Name, err)
 }
 
 func (c *TemplateInstanceController) provision(templateInstance *templateapi.TemplateInstance) error {
@@ -110,7 +124,7 @@ func (c *TemplateInstanceController) provision(templateInstance *templateapi.Tem
 
 	u := &user.DefaultInfo{Name: templateInstance.Spec.Requester.Username}
 
-	if err := c.authorize(u, &authorizationapi.Action{
+	if err := c.authorize(u, &authorization.ResourceAttributes{
 		Namespace: templateInstance.Namespace,
 		Verb:      "get",
 		Group:     kapi.GroupName,
@@ -142,10 +156,10 @@ func (c *TemplateInstanceController) provision(templateInstance *templateapi.Tem
 		}
 	}
 
-	if err = c.authorize(u, &authorizationapi.Action{
+	if err = c.authorize(u, &authorization.ResourceAttributes{
 		Namespace: templateInstance.Namespace,
 		Verb:      "create",
-		Group:     templateapi.LegacyGroupName,
+		Group:     templateapi.GroupName,
 		Resource:  "templateconfigs",
 	}); err != nil {
 		return err
@@ -185,7 +199,10 @@ func (c *TemplateInstanceController) provision(templateInstance *templateapi.Tem
 			}),
 		},
 		Op: func(info *resource.Info, namespace string, obj runtime.Object) (runtime.Object, error) {
-			if err = c.authorize(u, &authorizationapi.Action{
+			if len(info.Namespace) > 0 {
+				namespace = info.Namespace
+			}
+			if err = c.authorize(u, &authorization.ResourceAttributes{
 				Namespace: namespace,
 				Verb:      "create",
 				Group:     info.Mapping.GroupVersionKind.Group,

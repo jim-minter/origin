@@ -4,13 +4,13 @@ import (
 	"net/http"
 	"reflect"
 
-	authorizationapi "github.com/openshift/origin/pkg/authorization/api"
 	"github.com/openshift/origin/pkg/openservicebroker/api"
 	templateapi "github.com/openshift/origin/pkg/template/api"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apiserver/pkg/authentication/user"
 	kapi "k8s.io/kubernetes/pkg/api"
+	"k8s.io/kubernetes/pkg/apis/authorization"
 )
 
 func (b *Broker) ensureSecret(u user.Info, namespace string, instanceID string, preq *api.ProvisionRequest, didWork *bool) (*kapi.Secret, *api.Response) {
@@ -25,7 +25,7 @@ func (b *Broker) ensureSecret(u user.Info, namespace string, instanceID string, 
 		}
 	}
 
-	if err := b.authorize(u, &authorizationapi.Action{
+	if err := b.authorize(u, &authorization.ResourceAttributes{
 		Namespace: namespace,
 		Verb:      "create",
 		Group:     kapi.GroupName,
@@ -41,7 +41,7 @@ func (b *Broker) ensureSecret(u user.Info, namespace string, instanceID string, 
 	}
 
 	if kerrors.IsAlreadyExists(err) {
-		if err = b.authorize(u, &authorizationapi.Action{
+		if err = b.authorize(u, &authorization.ResourceAttributes{
 			Namespace: namespace,
 			Verb:      "get",
 			Group:     kapi.GroupName,
@@ -76,7 +76,7 @@ func (b *Broker) ensureTemplateInstance(u user.Info, namespace string, instanceI
 		},
 	}
 
-	if err := b.authorize(u, &authorizationapi.Action{
+	if err := b.authorize(u, &authorization.ResourceAttributes{
 		Namespace: namespace,
 		Verb:      "create",
 		Group:     templateapi.GroupName,
@@ -92,7 +92,7 @@ func (b *Broker) ensureTemplateInstance(u user.Info, namespace string, instanceI
 	}
 
 	if kerrors.IsAlreadyExists(err) {
-		if err := b.authorize(u, &authorizationapi.Action{
+		if err := b.authorize(u, &authorization.ResourceAttributes{
 			Namespace: namespace,
 			Verb:      "get",
 			Group:     templateapi.GroupName,
@@ -183,7 +183,9 @@ func (b *Broker) Provision(instanceID string, preq *api.ProvisionRequest) *api.R
 		return api.BadRequest(kerrors.NewNotFound(templateapi.Resource("templates"), preq.ServiceID))
 	}
 
-	if err := b.authorize(u, &authorizationapi.Action{
+	// TODO: sar against template ??
+
+	if err := b.authorize(u, &authorization.ResourceAttributes{
 		Namespace: namespace,
 		Verb:      "create",
 		Group:     templateapi.GroupName,

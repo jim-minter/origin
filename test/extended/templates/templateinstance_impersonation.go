@@ -122,7 +122,7 @@ var _ = g.Describe("[templates] templateinstance impersonation tests", func() {
 			},
 			Rules: []authorizationapi.PolicyRule{
 				{
-					Verbs:     sets.NewString("impersonate"),
+					Verbs:     sets.NewString("assign"),
 					APIGroups: []string{templateapi.GroupName},
 					Resources: sets.NewString("templateinstances"),
 				},

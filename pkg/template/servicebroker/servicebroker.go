@@ -4,7 +4,6 @@ import (
 	"errors"
 
 	authclient "github.com/openshift/origin/pkg/auth/client"
-	authorizationapi "github.com/openshift/origin/pkg/authorization/api"
 	"github.com/openshift/origin/pkg/client"
 	"github.com/openshift/origin/pkg/cmd/server/bootstrappolicy"
 	templateapi "github.com/openshift/origin/pkg/template/api"
@@ -17,6 +16,7 @@ import (
 	"k8s.io/apiserver/pkg/authentication/user"
 	restclient "k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
+	"k8s.io/kubernetes/pkg/apis/authorization"
 	kclientset "k8s.io/kubernetes/pkg/client/clientset_generated/internalclientset"
 )
 
@@ -51,14 +51,28 @@ func NewBroker(restconfig restclient.Config, informer templateinformer.TemplateI
 	}
 }
 
-func (b *Broker) authorize(u user.Info, action *authorizationapi.Action) error {
-	sar := authorizationapi.AddUserToSAR(u, &authorizationapi.SubjectAccessReview{Action: *action})
-	resp, err := b.oc.SubjectAccessReviews().Create(sar)
-	if err == nil && resp != nil && resp.Allowed {
+func (b *Broker) authorize(u user.Info, resourceAttributes *authorization.ResourceAttributes) error {
+	sar := &authorization.SubjectAccessReview{
+		Spec: authorization.SubjectAccessReviewSpec{
+			ResourceAttributes: resourceAttributes,
+			User:               u.GetName(),
+			Groups:             u.GetGroups(),
+		},
+	}
+
+	if extra := u.GetExtra(); len(extra) > 0 {
+		sar.Spec.Extra = map[string]authorization.ExtraValue{}
+		for k, v := range extra {
+			sar.Spec.Extra[k] = authorization.ExtraValue(v)
+		}
+	}
+
+	resp, err := b.kc.Authorization().SubjectAccessReviews().Create(sar)
+	if err == nil && resp != nil && resp.Status.Allowed {
 		return nil
 	}
 	if err == nil {
-		err = errors.New(resp.Reason)
+		err = errors.New(resp.Status.Reason)
 	}
-	return kerrors.NewForbidden(schema.GroupResource{Group: action.Group, Resource: action.Resource}, action.ResourceName, err)
+	return kerrors.NewForbidden(schema.GroupResource{Group: resourceAttributes.Group, Resource: resourceAttributes.Resource}, resourceAttributes.Name, err)
 }

@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 
+	templateapi "github.com/openshift/origin/pkg/template/api"
+	"github.com/openshift/origin/pkg/template/api/validation"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
@@ -15,22 +17,19 @@ import (
 	"k8s.io/apiserver/pkg/storage"
 	"k8s.io/apiserver/pkg/storage/names"
 	kapi "k8s.io/kubernetes/pkg/api"
-
-	authorizationapi "github.com/openshift/origin/pkg/authorization/api"
-	"github.com/openshift/origin/pkg/client"
-	templateapi "github.com/openshift/origin/pkg/template/api"
-	"github.com/openshift/origin/pkg/template/api/validation"
+	"k8s.io/kubernetes/pkg/apis/authorization"
+	kclientset "k8s.io/kubernetes/pkg/client/clientset_generated/internalclientset"
 )
 
 // templateInstanceStrategy implements behavior for Templates
 type templateInstanceStrategy struct {
 	runtime.ObjectTyper
 	names.NameGenerator
-	oc *client.Client
+	kc kclientset.Interface
 }
 
-func NewStrategy(oc *client.Client) *templateInstanceStrategy {
-	return &templateInstanceStrategy{kapi.Scheme, names.SimpleNameGenerator, oc}
+func NewStrategy(kc kclientset.Interface) *templateInstanceStrategy {
+	return &templateInstanceStrategy{kapi.Scheme, names.SimpleNameGenerator, kc}
 }
 
 // NamespaceScoped is true for templateinstances.
@@ -119,16 +118,30 @@ func SelectableFields(obj *templateapi.TemplateInstance) fields.Set {
 	return templateapi.TemplateInstanceToSelectableFields(obj)
 }
 
-func (s *templateInstanceStrategy) authorize(u user.Info, action *authorizationapi.Action) error {
-	sar := authorizationapi.AddUserToSAR(u, &authorizationapi.SubjectAccessReview{Action: *action})
-	resp, err := s.oc.SubjectAccessReviews().Create(sar)
-	if err == nil && resp != nil && resp.Allowed {
+func (s *templateInstanceStrategy) authorize(u user.Info, resourceAttributes *authorization.ResourceAttributes) error {
+	sar := &authorization.SubjectAccessReview{
+		Spec: authorization.SubjectAccessReviewSpec{
+			ResourceAttributes: resourceAttributes,
+			User:               u.GetName(),
+			Groups:             u.GetGroups(),
+		},
+	}
+
+	if extra := u.GetExtra(); len(extra) > 0 {
+		sar.Spec.Extra = map[string]authorization.ExtraValue{}
+		for k, v := range extra {
+			sar.Spec.Extra[k] = authorization.ExtraValue(v)
+		}
+	}
+
+	resp, err := s.kc.Authorization().SubjectAccessReviews().Create(sar)
+	if err == nil && resp != nil && resp.Status.Allowed {
 		return nil
 	}
 	if err == nil {
-		err = errors.New(resp.Reason)
+		err = errors.New(resp.Status.Reason)
 	}
-	return kerrors.NewForbidden(schema.GroupResource{Group: action.Group, Resource: action.Resource}, action.ResourceName, err)
+	return kerrors.NewForbidden(schema.GroupResource{Group: resourceAttributes.Group, Resource: resourceAttributes.Resource}, resourceAttributes.Name, err)
 }
 
 func (s *templateInstanceStrategy) validateImpersonation(templateInstance *templateapi.TemplateInstance, userinfo user.Info) field.ErrorList {
@@ -137,7 +150,7 @@ func (s *templateInstanceStrategy) validateImpersonation(templateInstance *templ
 	}
 
 	if templateInstance.Spec.Requester.Username != userinfo.GetName() {
-		if err := s.authorize(userinfo, &authorizationapi.Action{
+		if err := s.authorize(userinfo, &authorization.ResourceAttributes{
 			Namespace: templateInstance.Namespace,
 			Verb:      "assign",
 			Group:     templateapi.GroupName,
