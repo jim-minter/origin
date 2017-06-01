@@ -57,7 +57,8 @@ make clean
 
 # migrate the tito artifacts to the Origin directory
 mkdir -p "${OS_OUTPUT}"
-mv "${tito_output_directory}"/* "${OS_OUTPUT}"
+cp -a "${tito_output_directory}"/* "${OS_OUTPUT}"
+rmdir "${tito_output_directory}"
 mkdir -p "${OS_LOCAL_RPMPATH}"
 mv "${tito_tmp_dir}"/*src.rpm "${OS_LOCAL_RPMPATH}"
 mv "${tito_tmp_dir}"/*/*.rpm "${OS_LOCAL_RPMPATH}"
