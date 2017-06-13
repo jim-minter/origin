@@ -76,6 +76,11 @@ func (b *Broker) ensureSecret(u user.Info, namespace string, instanceID string, 
 func (b *Broker) ensureTemplateInstance(u user.Info, namespace string, instanceID string, template *templateapi.Template, secret *kapi.Secret, didWork *bool) (*templateapi.TemplateInstance, *api.Response) {
 	glog.V(4).Infof("Template service broker: ensureTemplateInstance")
 
+	extra := map[string]templateapi.ExtraValue{}
+	for k, v := range u.GetExtra() {
+		extra[k] = templateapi.ExtraValue(v)
+	}
+
 	templateInstance := &templateapi.TemplateInstance{
 		ObjectMeta: metav1.ObjectMeta{Name: instanceID},
 		Spec: templateapi.TemplateInstanceSpec{
@@ -83,6 +88,9 @@ func (b *Broker) ensureTemplateInstance(u user.Info, namespace string, instanceI
 			Secret:   kapi.LocalObjectReference{Name: secret.Name},
 			Requester: &templateapi.TemplateInstanceRequester{
 				Username: u.GetName(),
+				UID:      u.GetUID(),
+				Groups:   u.GetGroups(),
+				Extra:    extra,
 			},
 		},
 	}
@@ -260,18 +268,14 @@ func (b *Broker) Provision(u user.Info, instanceID string, preq *api.ProvisionRe
 		return api.BadRequest(kerrors.NewNotFound(templateapi.Resource("templates"), preq.ServiceID))
 	}
 
-	// TODO: enable SAR for template - at the moment I think this doesn't work
-	// properly because group information isn't populated in u.
-	/*
-		if err := util.Authorize(b.kc.Authorization().SubjectAccessReviews(), u, &authorization.ResourceAttributes{
-			Namespace: template.Namespace,
-			Verb:      "get",
-			Group:     templateapi.GroupName,
-			Resource:  "templates",
-		}); err != nil {
-			return api.Forbidden(err)
-		}
-	*/
+	if err := util.Authorize(b.kc.Authorization().SubjectAccessReviews(), u, &authorization.ResourceAttributes{
+		Namespace: template.Namespace,
+		Verb:      "get",
+		Group:     templateapi.GroupName,
+		Resource:  "templates",
+	}); err != nil {
+		return api.Forbidden(err)
+	}
 
 	if err := util.Authorize(b.kc.Authorization().SubjectAccessReviews(), u, &authorization.ResourceAttributes{
 		Namespace: namespace,

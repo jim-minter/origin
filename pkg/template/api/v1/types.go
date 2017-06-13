@@ -1,6 +1,8 @@
 package v1
 
 import (
+	"fmt"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	kapiv1 "k8s.io/kubernetes/pkg/api/v1"
@@ -127,8 +129,25 @@ type TemplateInstanceSpec struct {
 // TemplateInstanceRequester holds the identity of an agent requesting a
 // template instantiation.
 type TemplateInstanceRequester struct {
-	// username is the username of the agent requesting a template instantiation.
-	Username string `json:"username" protobuf:"bytes,1,opt,name=username"`
+	// The name that uniquely identifies this user among all active users.
+	Username string `json:"username,omitempty" protobuf:"bytes,1,opt,name=username"`
+	// A unique value that identifies this user across time. If this user is
+	// deleted and another user by the same name is added, they will have
+	// different UIDs.
+	UID string `json:"uid,omitempty" protobuf:"bytes,2,opt,name=uid"`
+	// The names of groups this user is a part of.
+	Groups []string `json:"groups,omitempty" protobuf:"bytes,3,rep,name=groups"`
+	// Any additional information provided by the authenticator.
+	Extra map[string]ExtraValue `json:"extra,omitempty" protobuf:"bytes,4,rep,name=extra"`
+}
+
+// ExtraValue masks the value so protobuf can generate
+// +protobuf.nullable=true
+// +protobuf.options.(gogoproto.goproto_stringer)=false
+type ExtraValue []string
+
+func (t ExtraValue) String() string {
+	return fmt.Sprintf("%v", []string(t))
 }
 
 // TemplateInstanceStatus describes the current state of a TemplateInstance.

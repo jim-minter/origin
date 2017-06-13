@@ -231,7 +231,17 @@ func (c *TemplateInstanceController) instantiate(templateInstance *templateapi.T
 		return fmt.Errorf("spec.requester.username not set")
 	}
 
-	u := &user.DefaultInfo{Name: templateInstance.Spec.Requester.Username}
+	extra := map[string][]string{}
+	for k, v := range templateInstance.Spec.Requester.Extra {
+		extra[k] = []string(v)
+	}
+
+	u := &user.DefaultInfo{
+		Name:   templateInstance.Spec.Requester.Username,
+		UID:    templateInstance.Spec.Requester.UID,
+		Groups: templateInstance.Spec.Requester.Groups,
+		Extra:  extra,
+	}
 
 	if err := util.Authorize(c.kc.Authorization().SubjectAccessReviews(), u, &authorization.ResourceAttributes{
 		Namespace: templateInstance.Namespace,

@@ -55,8 +55,17 @@ func (templateInstanceStrategy) PrepareForCreate(ctx apirequest.Context, obj run
 
 	if templateInstance.Spec.Requester == nil {
 		user, _ := apirequest.UserFrom(ctx)
+
+		extra := map[string]templateapi.ExtraValue{}
+		for k, v := range user.GetExtra() {
+			extra[k] = templateapi.ExtraValue(v)
+		}
+
 		templateInstance.Spec.Requester = &templateapi.TemplateInstanceRequester{
 			Username: user.GetName(),
+			UID:      user.GetUID(),
+			Groups:   user.GetGroups(),
+			Extra:    extra,
 		}
 	}
 
