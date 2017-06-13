@@ -6,16 +6,14 @@ serviceUUID=${serviceUUID-$(oc get template cakephp-mysql-example -n openshift -
 
 req="{
   \"plan_id\": \"$planUUID\",
-  \"service_id\": \"$serviceUUID\",
-  \"parameters\": {
-    \"template.openshift.io/requester-username\": \"$requesterUsername\"
-  }
+  \"service_id\": \"$serviceUUID\"
 }"
 
 curl \
   -X PUT \
   -H 'X-Broker-API-Version: 2.9' \
   -H 'Content-Type: application/json' \
+  -H "X-Broker-API-Originating-Identity: Kubernetes $(echo -ne "{\"Name\": \"$requesterUsername\"}" | base64)" \
   -d "$req" \
   -v \
   $curlargs \

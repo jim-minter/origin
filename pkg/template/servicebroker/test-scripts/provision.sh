@@ -12,17 +12,16 @@ req="{
     \"namespace\": \"$namespace\"
   },
   \"parameters\": {
-    \"MYSQL_USER\": \"username\",
-    \"template.openshift.io/requester-username\": \"$requesterUsername\"
-  },
-  \"accepts_incomplete\": true
+    \"MYSQL_USER\": \"username\"
+  }
 }"
 
 curl \
   -X PUT \
   -H 'X-Broker-API-Version: 2.9' \
   -H 'Content-Type: application/json' \
+  -H "X-Broker-API-Originating-Identity: Kubernetes $(echo -ne "{\"Name\": \"$requesterUsername\"}" | base64)" \
   -d "$req" \
   -v \
   $curlargs \
-  $endpoint/v2/service_instances/$instanceUUID
+  "$endpoint/v2/service_instances/$instanceUUID?accepts_incomplete=true"

@@ -10,6 +10,7 @@ import (
 
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apiserver/pkg/authentication/user"
 	kapi "k8s.io/kubernetes/pkg/api"
 )
 
@@ -17,7 +18,7 @@ import (
 // the OSB API only supports async Provision and Deprovision; we don't currently
 // support async Deprovision as the garbage collector doesn't indicate when it's
 // done cleaning up after a given object is removed.
-func (b *Broker) LastOperation(instanceID string, operation api.Operation) *api.Response {
+func (b *Broker) LastOperation(u user.Info, instanceID string, operation api.Operation) *api.Response {
 	// TODO: currently the spec does not allow for user information to be
 	// provided on LastOperation, so little authorization can be carried out.
 

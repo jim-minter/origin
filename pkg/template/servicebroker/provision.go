@@ -28,9 +28,7 @@ func (b *Broker) ensureSecret(u user.Info, namespace string, instanceID string, 
 	}
 
 	for k, v := range preq.Parameters {
-		if k != templateapi.RequesterUsernameParameterKey {
-			secret.Data[k] = []byte(v)
-		}
+		secret.Data[k] = []byte(v)
 	}
 
 	if err := util.Authorize(b.kc.Authorization().SubjectAccessReviews(), u, &authorization.ResourceAttributes{
@@ -194,7 +192,7 @@ func (b *Broker) ensureBrokerTemplateInstance(namespace, instanceID string, didW
 
 // Provision instantiates a template from a ProvisionRequest, via the OpenShift
 // TemplateInstance API.
-func (b *Broker) Provision(instanceID string, preq *api.ProvisionRequest) *api.Response {
+func (b *Broker) Provision(u user.Info, instanceID string, preq *api.ProvisionRequest) *api.Response {
 	glog.V(4).Infof("Template service broker: Provision: instanceID %s", instanceID)
 
 	if errs := ValidateProvisionRequest(preq); len(errs) > 0 {
@@ -202,8 +200,6 @@ func (b *Broker) Provision(instanceID string, preq *api.ProvisionRequest) *api.R
 	}
 
 	namespace := preq.Context.Namespace
-	impersonate := preq.Parameters[templateapi.RequesterUsernameParameterKey]
-	u := &user.DefaultInfo{Name: impersonate}
 
 	template, err := b.lister.GetByUID(preq.ServiceID)
 	if err != nil && !kerrors.IsNotFound(err) {

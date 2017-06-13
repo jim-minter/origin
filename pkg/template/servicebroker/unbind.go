@@ -5,6 +5,7 @@ import (
 
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apiserver/pkg/authentication/user"
 
 	"github.com/golang/glog"
 	"github.com/openshift/origin/pkg/openservicebroker/api"
@@ -12,7 +13,7 @@ import (
 
 // Unbind is the reverse of Bind.  Currently it simply removes the binding ID
 // from the BrokerTemplateInstance, if found.
-func (b *Broker) Unbind(instanceID, bindingID string) *api.Response {
+func (b *Broker) Unbind(u user.Info, instanceID, bindingID string) *api.Response {
 	glog.V(4).Infof("Template service broker: Unbind: instanceID %s, bindingID %s", instanceID, bindingID)
 
 	// TODO: currently the spec does not allow for user information to be

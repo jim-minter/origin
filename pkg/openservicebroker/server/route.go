@@ -1,6 +1,9 @@
 package server
 
 import (
+	"bytes"
+	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -10,6 +13,7 @@ import (
 	"github.com/golang/glog"
 
 	"k8s.io/apimachinery/pkg/util/validation/field"
+	"k8s.io/apiserver/pkg/authentication/user"
 
 	"github.com/openshift/origin/pkg/openservicebroker/api"
 )
@@ -79,6 +83,24 @@ func contentType(req *restful.Request, resp *restful.Response, chain *restful.Fi
 	chain.ProcessFilter(req, resp)
 }
 
+func getUser(req *restful.Request) (user.Info, error) {
+	identity := req.Request.Header.Get(api.XBrokerAPIOriginatingIdentity)
+	parts := strings.SplitN(identity, " ", 2)
+	if parts[0] != api.OriginatingIdentitySchemeKubernetes || len(parts) != 2 {
+		return nil, fmt.Errorf("couldn't parse %s header", api.XBrokerAPIOriginatingIdentity)
+	}
+
+	var u *user.DefaultInfo
+	b64d := base64.NewDecoder(base64.StdEncoding, bytes.NewBufferString(parts[1]))
+	jd := json.NewDecoder(b64d)
+	err := jd.Decode(&u)
+	if err != nil {
+		return nil, fmt.Errorf("couldn't parse %s header: %v", api.XBrokerAPIOriginatingIdentity, err)
+	}
+
+	return u, nil
+}
+
 func waitForReady(b api.Broker) func(*restful.Request, *restful.Response, *restful.FilterChain) {
 	return func(req *restful.Request, resp *restful.Response, chain *restful.FilterChain) {
 		if err := b.WaitForReady(); err != nil {
@@ -113,7 +135,12 @@ func provision(b api.Broker, req *restful.Request) *api.Response {
 		return api.NewResponse(http.StatusUnprocessableEntity, &api.AsyncRequired, nil)
 	}
 
-	return b.Provision(instanceID, &preq)
+	u, err := getUser(req)
+	if err != nil {
+		return api.BadRequest(err)
+	}
+
+	return b.Provision(u, instanceID, &preq)
 }
 
 func deprovision(b api.Broker, req *restful.Request) *api.Response {
@@ -126,7 +153,12 @@ func deprovision(b api.Broker, req *restful.Request) *api.Response {
 		return api.NewResponse(http.StatusUnprocessableEntity, &api.AsyncRequired, nil)
 	}
 
-	return b.Deprovision(instanceID)
+	u, err := getUser(req)
+	if err != nil {
+		return api.BadRequest(err)
+	}
+
+	return b.Deprovision(u, instanceID)
 }
 
 func lastOperation(b api.Broker, req *restful.Request) *api.Response {
@@ -142,7 +174,12 @@ func lastOperation(b api.Broker, req *restful.Request) *api.Response {
 		return api.BadRequest(fmt.Errorf("invalid operation"))
 	}
 
-	return b.LastOperation(instanceID, operation)
+	u, err := getUser(req)
+	if err != nil {
+		return api.BadRequest(err)
+	}
+
+	return b.LastOperation(u, instanceID, operation)
 }
 
 func bind(b api.Broker, req *restful.Request) *api.Response {
@@ -165,7 +202,12 @@ func bind(b api.Broker, req *restful.Request) *api.Response {
 		return api.BadRequest(errors.ToAggregate())
 	}
 
-	return b.Bind(instanceID, bindingID, &breq)
+	u, err := getUser(req)
+	if err != nil {
+		return api.BadRequest(err)
+	}
+
+	return b.Bind(u, instanceID, bindingID, &breq)
 }
 
 func unbind(b api.Broker, req *restful.Request) *api.Response {
@@ -179,5 +221,10 @@ func unbind(b api.Broker, req *restful.Request) *api.Response {
 		return api.BadRequest(errors.ToAggregate())
 	}
 
-	return b.Unbind(instanceID, bindingID)
+	u, err := getUser(req)
+	if err != nil {
+		return api.BadRequest(err)
+	}
+
+	return b.Unbind(u, instanceID, bindingID)
 }

@@ -11,6 +11,7 @@ import (
 
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apiserver/pkg/authentication/user"
 	kapi "k8s.io/kubernetes/pkg/api"
 
 	authorizationapi "github.com/openshift/origin/pkg/authorization/api"
@@ -100,15 +101,12 @@ var _ = g.Describe("[templates] templateservicebroker security test", func() {
 
 	provision := func(username string) error {
 		g.By("provisioning a service")
-		_, err := brokercli.Provision(context.Background(), instanceID, &api.ProvisionRequest{
+		_, err := brokercli.Provision(context.Background(), &user.DefaultInfo{Name: username}, instanceID, &api.ProvisionRequest{
 			ServiceID: service.ID,
 			PlanID:    plan.ID,
 			Context: api.KubernetesContext{
 				Platform:  api.ContextPlatformKubernetes,
 				Namespace: cli.Namespace(),
-			},
-			Parameters: map[string]string{
-				templateapi.RequesterUsernameParameterKey: username,
 			},
 		})
 		return err
@@ -116,12 +114,9 @@ var _ = g.Describe("[templates] templateservicebroker security test", func() {
 
 	bind := func(username string) error {
 		g.By("binding to a service")
-		_, err := brokercli.Bind(context.Background(), instanceID, bindingID, &api.BindRequest{
+		_, err := brokercli.Bind(context.Background(), &user.DefaultInfo{Name: username}, instanceID, bindingID, &api.BindRequest{
 			ServiceID: service.ID,
 			PlanID:    plan.ID,
-			Parameters: map[string]string{
-				templateapi.RequesterUsernameParameterKey: username,
-			},
 		})
 		return err
 	}

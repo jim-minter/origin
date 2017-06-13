@@ -3,14 +3,19 @@ package api
 // from https://github.com/openservicebrokerapi/servicebroker/blob/b33070e07cea53b9540b1d5ab8d1f62ddc556eb5/spec.md
 // and https://github.com/openservicebrokerapi/servicebroker/blob/b33070e07cea53b9540b1d5ab8d1f62ddc556eb5/profile.md
 // and https://github.com/avade/servicebroker/blob/9165f14ce6c54c3f81fba760cca53bd781febd6f/spec.md
+// and https://github.com/duglin/servicebroker/blob/c048cf914d3a3eecaabefdd4de3928bbd20a04b0/spec.md
 
 import (
+	"k8s.io/apiserver/pkg/authentication/user"
+
 	jsschema "github.com/lestrrat/go-jsschema"
 )
 
 const (
-	XBrokerAPIVersion = "X-Broker-Api-Version"
-	APIVersion        = "2.11"
+	XBrokerAPIVersion                   = "X-Broker-Api-Version"
+	APIVersion                          = "2.11"
+	XBrokerAPIOriginatingIdentity       = "X-Broker-API-Originating-Identity"
+	OriginatingIdentitySchemeKubernetes = "Kubernetes"
 )
 
 type Service struct {
@@ -175,11 +180,11 @@ type Response struct {
 type Broker interface {
 	WaitForReady() error
 	Catalog() *Response
-	Provision(instanceID string, preq *ProvisionRequest) *Response
-	Deprovision(instanceID string) *Response
-	Bind(instanceID string, bindingID string, breq *BindRequest) *Response
-	Unbind(instanceID string, bindingID string) *Response
-	LastOperation(instanceID string, operation Operation) *Response
+	Provision(u user.Info, instanceID string, preq *ProvisionRequest) *Response
+	Deprovision(u user.Info, instanceID string) *Response
+	Bind(u user.Info, instanceID string, bindingID string, breq *BindRequest) *Response
+	Unbind(u user.Info, instanceID string, bindingID string) *Response
+	LastOperation(u user.Info, instanceID string, operation Operation) *Response
 }
 
 const (

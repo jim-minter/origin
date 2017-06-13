@@ -121,19 +121,16 @@ func (b *Broker) getSecrets(u user.Info, namespace, instanceID string) (map[stri
 }
 
 // Bind returns the secrets and services from a provisioned template.
-func (b *Broker) Bind(instanceID, bindingID string, breq *api.BindRequest) *api.Response {
+func (b *Broker) Bind(u user.Info, instanceID, bindingID string, breq *api.BindRequest) *api.Response {
 	glog.V(4).Infof("Template service broker: Bind: instanceID %s, bindingID %s", instanceID, bindingID)
 
 	if errs := ValidateBindRequest(breq); len(errs) > 0 {
 		return api.BadRequest(errs.ToAggregate())
 	}
 
-	if len(breq.Parameters) != 1 {
+	if len(breq.Parameters) != 0 {
 		return api.BadRequest(errors.New("parameters not supported on bind"))
 	}
-
-	impersonate := breq.Parameters[templateapi.RequesterUsernameParameterKey]
-	u := &user.DefaultInfo{Name: impersonate}
 
 	brokerTemplateInstance, err := b.templateclient.BrokerTemplateInstances().Get(instanceID, metav1.GetOptions{})
 	if err != nil {

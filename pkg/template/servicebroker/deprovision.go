@@ -5,6 +5,7 @@ import (
 
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apiserver/pkg/authentication/user"
 
 	"github.com/golang/glog"
 	"github.com/openshift/origin/pkg/openservicebroker/api"
@@ -14,7 +15,7 @@ import (
 // Secret and BrokerTemplateInstance objects (in that order); the garbage
 // collector is responsible for the removal of the objects provisioned by the
 // Template(Instance) itself.
-func (b *Broker) Deprovision(instanceID string) *api.Response {
+func (b *Broker) Deprovision(u user.Info, instanceID string) *api.Response {
 	// TODO: currently the spec does not allow for user information to be
 	// provided on Deprovision, so little authorization can be carried out.
 
