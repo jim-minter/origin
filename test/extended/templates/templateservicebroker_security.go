@@ -121,6 +121,16 @@ var _ = g.Describe("[templates] templateservicebroker security test", func() {
 		return err
 	}
 
+	unbind := func(username string) error {
+		g.By("unbinding from a service")
+		return brokercli.Unbind(context.Background(), &user.DefaultInfo{Name: username}, instanceID, bindingID)
+	}
+
+	deprovision := func(username string) error {
+		g.By("deprovisioning a service")
+		return brokercli.Deprovision(context.Background(), &user.DefaultInfo{Name: username}, instanceID)
+	}
+
 	g.It("should pass security tests", func() {
 		catalog()
 
@@ -165,7 +175,7 @@ var _ = g.Describe("[templates] templateservicebroker security test", func() {
 		o.Expect(err).NotTo(o.HaveOccurred())
 		o.Expect(brokerTemplateInstance.Spec.BindingIDs).To(o.HaveLen(0))
 
-		g.By("having view permissions to the namespace, bind should fail with 403") // view does not enable reading Secrets
+		g.By("having view permissions to the namespace, bind should fail with 403")
 		err = bind(viewuser.Name)
 		o.Expect(err).To(o.HaveOccurred())
 		o.Expect(err).To(o.BeAssignableToTypeOf(&client.ServerError{}))
@@ -183,5 +193,65 @@ var _ = g.Describe("[templates] templateservicebroker security test", func() {
 		brokerTemplateInstance, err = cli.AdminTemplateClient().Template().BrokerTemplateInstances().Get(instanceID, metav1.GetOptions{})
 		o.Expect(err).NotTo(o.HaveOccurred())
 		o.Expect(brokerTemplateInstance.Spec.BindingIDs).To(o.Equal([]string{bindingID}))
+
+		g.By("having no permissions to the namespace, unbind should fail with 403")
+		err = unbind(nopermsuser.Name)
+		o.Expect(err).To(o.HaveOccurred())
+		o.Expect(err).To(o.BeAssignableToTypeOf(&client.ServerError{}))
+		o.Expect(err.(*client.ServerError).StatusCode).To(o.Equal(http.StatusForbidden))
+
+		g.By("having no permissions to the namespace, the BrokerTemplateInstance should be unchanged")
+		newBrokerTemplateInstance, err := cli.AdminTemplateClient().Template().BrokerTemplateInstances().Get(instanceID, metav1.GetOptions{})
+		o.Expect(err).NotTo(o.HaveOccurred())
+		o.Expect(newBrokerTemplateInstance).To(o.Equal(brokerTemplateInstance))
+
+		g.By("having view permissions to the namespace, unbind should fail with 403")
+		err = unbind(viewuser.Name)
+		o.Expect(err).To(o.HaveOccurred())
+		o.Expect(err).To(o.BeAssignableToTypeOf(&client.ServerError{}))
+		o.Expect(err.(*client.ServerError).StatusCode).To(o.Equal(http.StatusForbidden))
+
+		g.By("having view permissions to the namespace, the BrokerTemplateInstance should be unchanged")
+		newBrokerTemplateInstance, err = cli.AdminTemplateClient().Template().BrokerTemplateInstances().Get(instanceID, metav1.GetOptions{})
+		o.Expect(err).NotTo(o.HaveOccurred())
+		o.Expect(newBrokerTemplateInstance).To(o.Equal(brokerTemplateInstance))
+
+		g.By("having edit permissions to the namespace, unbind should succeed")
+		err = unbind(edituser.Name)
+		o.Expect(err).NotTo(o.HaveOccurred())
+
+		brokerTemplateInstance, err = cli.AdminTemplateClient().Template().BrokerTemplateInstances().Get(instanceID, metav1.GetOptions{})
+		o.Expect(err).NotTo(o.HaveOccurred())
+		o.Expect(brokerTemplateInstance.Spec.BindingIDs).To(o.BeEmpty())
+
+		g.By("having no permissions to the namespace, deprovision should fail with 403")
+		err = deprovision(nopermsuser.Name)
+		o.Expect(err).To(o.HaveOccurred())
+		o.Expect(err).To(o.BeAssignableToTypeOf(&client.ServerError{}))
+		o.Expect(err.(*client.ServerError).StatusCode).To(o.Equal(http.StatusForbidden))
+
+		g.By("having no permissions to the namespace, the BrokerTemplateInstance should be unchanged")
+		newBrokerTemplateInstance, err = cli.AdminTemplateClient().Template().BrokerTemplateInstances().Get(instanceID, metav1.GetOptions{})
+		o.Expect(err).NotTo(o.HaveOccurred())
+		o.Expect(newBrokerTemplateInstance).To(o.Equal(brokerTemplateInstance))
+
+		g.By("having view permissions to the namespace, deprovision should fail with 403")
+		err = deprovision(viewuser.Name)
+		o.Expect(err).To(o.HaveOccurred())
+		o.Expect(err).To(o.BeAssignableToTypeOf(&client.ServerError{}))
+		o.Expect(err.(*client.ServerError).StatusCode).To(o.Equal(http.StatusForbidden))
+
+		g.By("having view permissions to the namespace, the BrokerTemplateInstance should be unchanged")
+		newBrokerTemplateInstance, err = cli.AdminTemplateClient().Template().BrokerTemplateInstances().Get(instanceID, metav1.GetOptions{})
+		o.Expect(err).NotTo(o.HaveOccurred())
+		o.Expect(newBrokerTemplateInstance).To(o.Equal(brokerTemplateInstance))
+
+		g.By("having edit permissions to the namespace, deprovision should succeed")
+		err = deprovision(edituser.Name)
+		o.Expect(err).NotTo(o.HaveOccurred())
+
+		_, err = cli.AdminTemplateClient().Template().BrokerTemplateInstances().Get(instanceID, metav1.GetOptions{})
+		o.Expect(err).To(o.HaveOccurred())
+		o.Expect(kerrors.IsNotFound(err)).To(o.BeTrue())
 	})
 })

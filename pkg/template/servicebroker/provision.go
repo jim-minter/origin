@@ -129,14 +129,22 @@ func (b *Broker) ensureTemplateInstance(u user.Info, namespace string, instanceI
 // ensureBrokerTemplateInstanceUIDs ensures the UIDs of the namespaced Secret
 // and TemplateInstance objects are set in the BrokerTemplateInstance object, as
 // proof that we are done.
-func (b *Broker) ensureBrokerTemplateInstanceUIDs(brokerTemplateInstance *templateapi.BrokerTemplateInstance, secret *kapi.Secret, templateInstance *templateapi.TemplateInstance, didWork *bool) (*templateapi.BrokerTemplateInstance, *api.Response) {
+func (b *Broker) ensureBrokerTemplateInstanceUIDs(u user.Info, namespace string, brokerTemplateInstance *templateapi.BrokerTemplateInstance, secret *kapi.Secret, templateInstance *templateapi.TemplateInstance, didWork *bool) (*templateapi.BrokerTemplateInstance, *api.Response) {
 	glog.V(4).Infof("Template service broker: ensureBrokerTemplateInstanceUIDs")
 
 	brokerTemplateInstance.Spec.Secret.UID = secret.UID
 	brokerTemplateInstance.Spec.TemplateInstance.UID = templateInstance.UID
 
-	// there is no SAR here because end users are not expected to have access to
-	// BrokerTemplateInstance objects.
+	// end users are not expected to have access to BrokerTemplateInstance
+	// objects; SAR on the TemplateInstance instead.
+	if err := util.Authorize(b.kc.Authorization().SubjectAccessReviews(), u, &authorization.ResourceAttributes{
+		Namespace: namespace,
+		Verb:      "update",
+		Group:     templateapi.GroupName,
+		Resource:  "templateinstances",
+	}); err != nil {
+		return nil, api.Forbidden(err)
+	}
 
 	brokerTemplateInstance, err := b.templateclient.BrokerTemplateInstances().Update(brokerTemplateInstance)
 	if err == nil {
@@ -150,7 +158,7 @@ func (b *Broker) ensureBrokerTemplateInstanceUIDs(brokerTemplateInstance *templa
 // ensureBrokerTemplateInstance ensures the existence of BrokerTemplateInstance
 // object (records intent, globally maps instanceID to namespaced Secret and
 // TemplateInstance objects).
-func (b *Broker) ensureBrokerTemplateInstance(namespace, instanceID string, didWork *bool) (*templateapi.BrokerTemplateInstance, *api.Response) {
+func (b *Broker) ensureBrokerTemplateInstance(u user.Info, namespace, instanceID string, didWork *bool) (*templateapi.BrokerTemplateInstance, *api.Response) {
 	glog.V(4).Infof("Template service broker: ensureBrokerTemplateInstance")
 
 	brokerTemplateInstance := &templateapi.BrokerTemplateInstance{
@@ -169,8 +177,16 @@ func (b *Broker) ensureBrokerTemplateInstance(namespace, instanceID string, didW
 		},
 	}
 
-	// there is no SAR here because end users are not expected to have access to
-	// BrokerTemplateInstance objects.
+	// end users are not expected to have access to BrokerTemplateInstance
+	// objects; SAR on the TemplateInstance instead.
+	if err := util.Authorize(b.kc.Authorization().SubjectAccessReviews(), u, &authorization.ResourceAttributes{
+		Namespace: namespace,
+		Verb:      "create",
+		Group:     templateapi.GroupName,
+		Resource:  "templateinstances",
+	}); err != nil {
+		return nil, api.Forbidden(err)
+	}
 
 	newBrokerTemplateInstance, err := b.templateclient.BrokerTemplateInstances().Create(brokerTemplateInstance)
 	if err == nil {
@@ -179,6 +195,17 @@ func (b *Broker) ensureBrokerTemplateInstance(namespace, instanceID string, didW
 	}
 
 	if kerrors.IsAlreadyExists(err) {
+		// end users are not expected to have access to BrokerTemplateInstance
+		// objects; SAR on the TemplateInstance instead.
+		if err := util.Authorize(b.kc.Authorization().SubjectAccessReviews(), u, &authorization.ResourceAttributes{
+			Namespace: namespace,
+			Verb:      "get",
+			Group:     templateapi.GroupName,
+			Resource:  "templateinstances",
+		}); err != nil {
+			return nil, api.Forbidden(err)
+		}
+
 		existingBrokerTemplateInstance, err := b.templateclient.BrokerTemplateInstances().Get(brokerTemplateInstance.Name, metav1.GetOptions{})
 		if err == nil && reflect.DeepEqual(brokerTemplateInstance.Spec, existingBrokerTemplateInstance.Spec) {
 			return existingBrokerTemplateInstance, nil
@@ -273,7 +300,7 @@ func (b *Broker) Provision(u user.Info, instanceID string, preq *api.ProvisionRe
 	// 4. Ensure the UIDs of the namespaced Secret and TemplateInstance objects
 	// are set in the BrokerTemplateInstance object, as proof that we are done.
 
-	brokerTemplateInstance, resp := b.ensureBrokerTemplateInstance(namespace, instanceID, &didWork)
+	brokerTemplateInstance, resp := b.ensureBrokerTemplateInstance(u, namespace, instanceID, &didWork)
 	if resp != nil {
 		return resp
 	}
@@ -288,7 +315,7 @@ func (b *Broker) Provision(u user.Info, instanceID string, preq *api.ProvisionRe
 		return resp
 	}
 
-	_, resp = b.ensureBrokerTemplateInstanceUIDs(brokerTemplateInstance, secret, templateInstance, &didWork)
+	_, resp = b.ensureBrokerTemplateInstanceUIDs(u, namespace, brokerTemplateInstance, secret, templateInstance, &didWork)
 	if resp != nil {
 		return resp
 	}

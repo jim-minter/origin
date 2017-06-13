@@ -143,9 +143,8 @@ func (b *Broker) Bind(u user.Info, instanceID, bindingID string, breq *api.BindR
 
 	namespace := brokerTemplateInstance.Spec.TemplateInstance.Namespace
 
-	// since we can, cross-check breq.ServiceID and
-	// templateInstance.Spec.Template.UID.
-
+	// end users are not expected to have access to BrokerTemplateInstance
+	// objects; SAR on the TemplateInstance instead.
 	if err := util.Authorize(b.kc.Authorization().SubjectAccessReviews(), u, &authorization.ResourceAttributes{
 		Namespace: namespace,
 		Verb:      "get",
@@ -154,6 +153,9 @@ func (b *Broker) Bind(u user.Info, instanceID, bindingID string, breq *api.BindR
 	}); err != nil {
 		return api.Forbidden(err)
 	}
+
+	// since we can, cross-check breq.ServiceID and
+	// templateInstance.Spec.Template.UID.
 
 	templateInstance, err := b.templateclient.TemplateInstances(namespace).Get(brokerTemplateInstance.Spec.TemplateInstance.Name, metav1.GetOptions{})
 	if err != nil {
@@ -190,6 +192,17 @@ func (b *Broker) Bind(u user.Info, instanceID, bindingID string, breq *api.BindR
 		}
 	}
 	if status == http.StatusCreated { // binding not found; create it
+		// end users are not expected to have access to BrokerTemplateInstance
+		// objects; SAR on the TemplateInstance instead.
+		if err := util.Authorize(b.kc.Authorization().SubjectAccessReviews(), u, &authorization.ResourceAttributes{
+			Namespace: namespace,
+			Verb:      "update",
+			Group:     templateapi.GroupName,
+			Resource:  "templateinstances",
+		}); err != nil {
+			return api.Forbidden(err)
+		}
+
 		brokerTemplateInstance.Spec.BindingIDs = append(brokerTemplateInstance.Spec.BindingIDs, bindingID)
 		brokerTemplateInstance, err = b.templateclient.BrokerTemplateInstances().Update(brokerTemplateInstance)
 		if err != nil {
