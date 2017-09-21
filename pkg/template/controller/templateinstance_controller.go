@@ -35,7 +35,6 @@ import (
 	templateinternalclient "github.com/openshift/origin/pkg/template/client/internalversion"
 	"github.com/openshift/origin/pkg/template/generated/informers/internalversion/template/internalversion"
 	templateclient "github.com/openshift/origin/pkg/template/generated/internalclientset"
-	internalversiontemplate "github.com/openshift/origin/pkg/template/generated/internalclientset/typed/template/internalversion"
 	templatelister "github.com/openshift/origin/pkg/template/generated/listers/template/internalversion"
 	restutil "github.com/openshift/origin/pkg/util/rest"
 )
@@ -56,8 +55,7 @@ type TemplateInstanceController struct {
 	//				status of the last build.
 	buildClient buildclient.Interface
 
-	kc             kclientsetinternal.Interface
-	templateclient internalversiontemplate.TemplateInterface
+	kc kclientsetinternal.Interface
 
 	lister   templatelister.TemplateInstanceLister
 	informer cache.SharedIndexInformer
@@ -199,7 +197,7 @@ func (c *TemplateInstanceController) sync(key string) error {
 		}
 	}
 
-	_, err = c.templateclient.TemplateInstances(templateInstance.Namespace).UpdateStatus(templateInstance)
+	_, err = c.templateClient.Template().TemplateInstances(templateInstance.Namespace).UpdateStatus(templateInstance)
 	if err != nil {
 		utilruntime.HandleError(fmt.Errorf("TemplateInstance status update failed: %v", err))
 		return err
@@ -423,12 +421,12 @@ func (c *TemplateInstanceController) instantiate(templateInstance *templateapi.T
 	glog.V(4).Infof("TemplateInstance controller: creating TemplateConfig for %s/%s", templateInstance.Namespace, templateInstance.Name)
 
 	tc := templateinternalclient.NewTemplateProcessorClient(c.templateClient.Template().RESTClient(), templateInstance.Namespace)
-	processedTemplate, err := tc.Process(template)
+	template, err = tc.Process(template)
 	if err != nil {
 		return err
 	}
 
-	errs := runtime.DecodeList(processedTemplate.Objects, kapi.Codecs.UniversalDecoder())
+	errs := runtime.DecodeList(template.Objects, kapi.Codecs.UniversalDecoder())
 	if len(errs) > 0 {
 		return kerrs.NewAggregate(errs)
 	}
@@ -480,7 +478,7 @@ func (c *TemplateInstanceController) instantiate(templateInstance *templateapi.T
 	// to create.
 	glog.V(4).Infof("TemplateInstance controller: running SARs for %s/%s", templateInstance.Namespace, templateInstance.Name)
 
-	errs = bulk.Run(&kapi.List{Items: processedTemplate.Objects}, templateInstance.Namespace)
+	errs = bulk.Run(&kapi.List{Items: template.Objects}, templateInstance.Namespace)
 	if len(errs) > 0 {
 		return utilerrors.NewAggregate(errs)
 	}
